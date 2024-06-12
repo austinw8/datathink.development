@@ -1,0 +1,77 @@
+---
+title: "Case Study 1"
+author: "Austin Mangelson"
+date: "2024-06-10"
+output: html_document
+---
+
+**Purpose:** The purpose of this documents is to:
+
+1.  Display my understanding of .Rmd files and syntax
+2.  Exercise my ability to understand and critique data driven visualization
+
+# Critiquing Data Visualizations
+
+## 1. The Least Affordable Cities in America
+
+![](images/the-least-affordable-places-to-buy-a-home-in-america_2020-08-20T15_17_05.060Z.png)
+
+<https://priceonomics.com/most-and-least-affordable-places-to-buy-a-home/>
+
+**What's Good?**
+
+-   The visualization in a basic list format makes the data accessible and easy to understand.
+-   The organization from least to most is an easy way to quickly see the cities that are not affordable.
+
+**What can be improved:**
+
+-   Of the top 50 least affordable cities, only 7 are not in California. To really drive this point home, I think a density map visualizing the most vs. least affordable areas would be more impactful.
+
+## 2. Average Number of Marriages per Day
+
+![](images/lu2hoidlvr5d1.png)
+
+<https://www.reddit.com/r/dataisbeautiful/comments/1dcpz5l/when_do_people_get_married_oc/>
+
+**What's Good?**
+
+-   With this chart you can very quickly see that the summer months are by far the most popular times to get married.
+-   It's an interesting way to visualize outlier trends (*for example, you can quickly gather that outside of the summer months, Valentines Day is a popular time to get married, while Christmas is avoided*)
+
+**What can be improved:**
+
+-   The color hue choice is not intuitive. Instead, opting for a color saturation scale (*ex. light blue to dark blue*) might make a bit more sense.
+-   There is no way to quickly visualize weekend vs. weekday trends. Perhaps that needs to be a different graph entirely, but it would be interesting information.
+
+## 3. Data Skills Needed in the Coming Years
+
+![](images/image1-42.png)
+
+<https://priceonomics.com/survey-which-data-skills-do-you-need-to-get-ahead/>
+
+*In this example, I'm specifically looking at the "Least Affordable Places to Buy a Home in America" table.*
+
+**What's Good?**
+
+*This graph very clearly shows how valuable specific data skills are, and the differing responses between each one.* This graph is concise and does well at highlighting specific aspects of data skills for more detailed insights.
+
+**What can be improved:**
+
+-   It is unclear what each row's skill is referring to (*skills vs success metrics?, etc.*)
+-   It is an extremely generalized visualization, and would be more valuable if it charted valuable data skills per industry.
+
+## 4. Largest US Cities Ranked by 2022 Crime Rates
+
+![](images/largest_cities-01.png)
+
+<https://www.reddit.com/r/dataisbeautiful/comments/1dbzkgj/oc_largest_us_cities_ranked_by_2022_crime_rates/>
+
+**What's Good?**
+
+-   The color hue differentiation between violent crime vs. property crime is useful in visualizing a difference in the amount of each type of crime.
+-   The stacked bar chart quickly displays differences in crimes within a given city.
+
+**What can be improved:**
+
+-   The stacked bar chart makes it difficult to communicate crime rate trends between differing cities. A line chart would more easily communicate this information.
+-   I almost feel as if this is trying to contain/communicate too much information at once. Utilizing multiple charts to show differences in crime types, specific crimes, and between different cities would be useful.
