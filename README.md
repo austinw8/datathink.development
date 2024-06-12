@@ -1,3 +1,3 @@
-# datathink.development
+# DataThink Development Core Project
 
-This is a line from RStudio
+This project serves as the hub for my personal data science project done through the DataThink Development BYUI course. 
