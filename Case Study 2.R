@@ -4,15 +4,13 @@ library(dplyr)
 view(gapminder)
 
 
-# prepping data --------------------------------------------------
+# create 1st scatter plot -------------------------------------------------
 
 gapminder_without_Kuwait <- 
   gapminder |>
     filter(!country == "Kuwait") |> 
     mutate(gapminder_without_Kuwait,
            pop_per_100k = pop / 100000)
-
-# create 1st scatter plot -------------------------------------------------
 
 ggplot(gapminder_without_Kuwait, aes(x = lifeExp, y = gdpPercap)) +
   geom_point(aes(
@@ -33,6 +31,12 @@ ggplot(gapminder_without_Kuwait, aes(x = lifeExp, y = gdpPercap)) +
   )
 
 # create 2nd line graph ---------------------------------------------------
+
+gapminder_without_Kuwait <- 
+  gapminder |>
+  filter(!country == "Kuwait") |> 
+  mutate(gapminder_without_Kuwait,
+         pop_per_100k = pop / 100000)
 
 gapminder_without_Kuwait |> 
   group_by(continent) |> 

@@ -68,4 +68,4 @@ ggplot(gapminder_without_Kuwait, aes(x = year, y = gdpPercap)) +
   )
 ```
 
-![](images/GDP Growth per Year by Continent)
+![](images/GDP%20Growth%20per%20Year%20by%20Continent)
