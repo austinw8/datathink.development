@@ -1,0 +1,116 @@
+---
+title: 'Task 5: World Date Investigation'
+author: "Austin Mangelson"
+date: "2024-06-15"
+output: html_document
+---
+
+## Child Mortality Rates
+
+Over the last two centuries, there has been a general downward trend in child mortality rates across the world. The rate of decline appears to be faster in the 20th century than in the 19th century. Africa has consistently had the highest child mortality rates throughout the entire time period, while Europe has had the lowest.
+
+```{r avg_child_mortality-rates} 
+library(devtools)
+library(ourworldindata)
+library(dplyr)
+library(ggplot2)
+library(usethis)
+
+child_mortality_summary2 <- 
+  child_mortality |> 
+  group_by(continent, year) |> 
+  summarise(avg_mort_per_continent = mean(child_mort, na.rm = TRUE)) |> 
+  na.omit(child_mortality)
+
+ggplot(child_mortality_summary2, aes(x = year, y = avg_mort_per_continent)) +
+  geom_line(aes(color = continent), linewidth = 1.25) +
+  coord_cartesian(xlim = c(1800, 2013)) + 
+  theme_bw() +
+  labs(
+    title = "Child Mortality Rates Have Been Declining Since 1800",
+    subtitle = "faster decline rates starting in the 1900s",
+    x = "Year",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  )
+```
+
+![](images/Child mortality rates since 1800 by continent-01)
+
+## Countries With the Highest & Lowest Mortality Rates
+
+### Highest Child Mortality Rates
+
+The countries with the highest average child mortality rates since 1800 are Sierra Leone, Mali, Angola, South Sudan, and Senegal. These countries appear to be primarily in Africa, with some found in the Middle East or Southern Asia.
+
+```{r highest_child_mort_countries}
+library(devtools)
+library(ourworldindata)
+library(dplyr)
+library(RColorBrewer)
+library(ggplot2)
+library(usethis)
+
+child_mortality_summary <- 
+  child_mortality |> 
+  group_by(country) |> 
+  summarize(
+    avg_child_mortality = mean(child_mort, na.rm = TRUE), 
+    avg_population = mean(population, na.rm = TRUE)) |> 
+  na.omit(child_mortality)
+
+most_child_mort_by_country <- 
+  child_mortality_summary |> 
+  slice_max(avg_child_mortality, n = 10)
+
+ggplot(most_child_mort_by_country, aes(x = reorder(country, -avg_child_mortality), y = avg_child_mortality)) + 
+  geom_col(aes(fill = country)) +
+  scale_fill_brewer(palette = "Set3") +
+  theme(legend.position = "none") +
+  labs(
+    title = "Countries with the Highest Average Child Mortality Rates",
+    subtitle = "Since 1800",
+    x = "Country",
+    y = "Average Child Mortality Rate"
+  )
+```
+
+![](images/Highest Child Mortality Rate Countries)
+
+### Lowest Mortality Rates
+
+The countries with the lowest average child mortality rates since 1800 are Andorra, Monaco, Hong Kong, San Marino, and Taiwan. There does not appear to be any geographic relation between these countries. *It's important to note that many of these listed are geographically small micro states. This would be an interesting fact to explore further.*
+
+```{r lowest_child_mort_countries}
+library(devtools)
+library(ourworldindata)
+library(dplyr)
+library(RColorBrewer)
+library(ggplot2)
+library(usethis)
+
+child_mortality_summary <- 
+  child_mortality |> 
+  group_by(country) |> 
+  summarize(
+    avg_child_mortality = mean(child_mort, na.rm = TRUE), 
+    avg_population = mean(population, na.rm = TRUE)) |> 
+  na.omit(child_mortality)
+
+least_child_mort_by_country <- 
+  child_mortality_summary |> 
+  slice_min(avg_child_mortality, n = 10)
+
+ggplot(least_child_mort_by_country, aes(x = reorder(country, -avg_child_mortality), y = avg_child_mortality)) + 
+  geom_col(aes(fill = country)) +
+  scale_fill_brewer(palette = "Set3") +
+  theme(legend.position = "none") +
+  labs(
+    title = "Countries with the Lowest Average Child Mortality Rates",
+    subtitle = "Since 1800",
+    x = "Country",
+    y = "Average Child Mortality Rate"
+  )
+
+```
+
+![](images/Lowest Child Mortality Rate Countries)
