@@ -2,14 +2,17 @@
 title: 'Task 5: World Date Investigation'
 author: "Austin Mangelson"
 date: "2024-06-15"
-output: html_document
+output: 
+  html_document:
+    toc_float: true
 ---
 
 ## Child Mortality Rates
 
 Over the last two centuries, there has been a general downward trend in child mortality rates across the world. The rate of decline appears to be faster in the 20th century than in the 19th century. Africa has consistently had the highest child mortality rates throughout the entire time period, while Europe has had the lowest.
 
-```{r avg_child_mortality-rates} 
+```{r avg_child_mortality-rates, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
+
 library(devtools)
 library(ourworldindata)
 library(dplyr)
@@ -19,30 +22,50 @@ library(usethis)
 child_mortality_summary2 <- 
   child_mortality |> 
   group_by(continent, year) |> 
+  filter(year >= 1800) |> 
   summarise(avg_mort_per_continent = mean(child_mort, na.rm = TRUE)) |> 
   na.omit(child_mortality)
-
+  
 ggplot(child_mortality_summary2, aes(x = year, y = avg_mort_per_continent)) +
   geom_line(aes(color = continent), linewidth = 1.25) +
   coord_cartesian(xlim = c(1800, 2013)) + 
   theme_bw() +
+  scale_x_continuous(breaks = seq(1800, 2000, by = 25)) +
   labs(
     title = "Child Mortality Rates Have Been Declining Since 1800",
-    subtitle = "faster decline rates starting in the 1900s",
+    subtitle = "Faster decline rates starting in the 1900s",
     x = "Year",
     y = "Average Child Mortality Rate (per 1,000 born)"
-  )
+  ) +
+  geom_vline(xintercept = 1928) +
+  geom_text(aes(x = 1928, label = "\nAntibiotics Discovered", y = 80, angle = 90), color = "forestgreen") +
+  geom_vline(xintercept = 1918) +
+  geom_text(aes(x = 1918, label = "\nWWI", y = 50, angle = 90), color = "red") + 
+  geom_vline(xintercept = 1945) +
+  geom_text(aes(x = 1945, label = "\nWW2", y = 50, angle = 90), color = "red") + 
+  geom_vline(xintercept = 1955) +
+  geom_text(aes(x = 1955, label = "\nPolio Vaccine", y = 400, angle = 90), color = "forestgreen") + 
+  geom_vline(xintercept = 1861) +
+  geom_text(aes(x = 1861, label = "\nDiscovery of Germ Theory", y = 95, angle = 90), color = "forestgreen")
+
+
 ```
 
-![](images/Child mortality rates since 1800 by continent-01)
+![](images/Child%20mortality%20rates%20since%201800%20by%20continent)
+
+Its important to note the major historical events that have effected child mortality rates over the past two centuries. Most notable is the **discovery of germ theory by Louis Pasteur (1861)**, which had a domino effect of increased vaccine discoveries, more mothers giving birth in hospitals as opposed to their homes, and more.
+
+Other positive notable events include the discovery of antibiotics (1928) and the invention of the Polio vaccine (1955), which have resulted in significant declines in child mortality rates.
+
+Major global conflicts (WWI and WWII) have influenced child mortality rates as well, although not so optimistically. These two major conflicts, primarily European, reflect temporary spikes in child mortality.
 
 ## Countries With the Highest & Lowest Mortality Rates
 
 ### Highest Child Mortality Rates
 
-The countries with the highest average child mortality rates since 1800 are Sierra Leone, Mali, Angola, South Sudan, and Senegal. These countries appear to be primarily in Africa, with some found in the Middle East or Southern Asia.
+The countries with the highest average child mortality rates between 1800 - 2015 are Sierra Leone, Mali, Angola, South Sudan, and Senegal. These countries appear to be primarily in Africa, with some found in the Middle East or Southern Asia.
 
-```{r highest_child_mort_countries}
+```{r highest_child_mort_countries, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
 library(devtools)
 library(ourworldindata)
 library(dplyr)
@@ -63,24 +86,24 @@ most_child_mort_by_country <-
   slice_max(avg_child_mortality, n = 10)
 
 ggplot(most_child_mort_by_country, aes(x = reorder(country, -avg_child_mortality), y = avg_child_mortality)) + 
-  geom_col(aes(fill = country)) +
-  scale_fill_brewer(palette = "Set3") +
+  geom_col(aes(), fill = "darkred") +
   theme(legend.position = "none") +
+  theme_bw() +
   labs(
     title = "Countries with the Highest Average Child Mortality Rates",
-    subtitle = "Since 1800",
+    subtitle = "From 1800 to 2015",
     x = "Country",
-    y = "Average Child Mortality Rate"
+    y = "Average Child Mortality Rate (per 1,000 born)"
   )
 ```
 
-![](images/Highest Child Mortality Rate Countries)
+![](images/Highest%20Child%20Mortality%20Rate%20Countries)
 
 ### Lowest Mortality Rates
 
-The countries with the lowest average child mortality rates since 1800 are Andorra, Monaco, Hong Kong, San Marino, and Taiwan. There does not appear to be any geographic relation between these countries. *It's important to note that many of these listed are geographically small micro states. This would be an interesting fact to explore further.*
+The countries with the lowest average child mortality rates between 1800 - 2015 are Andorra, Monaco, Hong Kong, San Marino, and Taiwan. There does not appear to be any geographic relation between these countries.
 
-```{r lowest_child_mort_countries}
+```{r lowest_child_mort_countries, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
 library(devtools)
 library(ourworldindata)
 library(dplyr)
@@ -101,16 +124,21 @@ least_child_mort_by_country <-
   slice_min(avg_child_mortality, n = 10)
 
 ggplot(least_child_mort_by_country, aes(x = reorder(country, -avg_child_mortality), y = avg_child_mortality)) + 
-  geom_col(aes(fill = country)) +
-  scale_fill_brewer(palette = "Set3") +
+  geom_col(aes(), fill = "darkred") +
   theme(legend.position = "none") +
+  theme_bw() +
+  coord_cartesian(ylim = c(0, 430)) +
   labs(
     title = "Countries with the Lowest Average Child Mortality Rates",
-    subtitle = "Since 1800",
+    subtitle = "From 1800 to 2015",
     x = "Country",
-    y = "Average Child Mortality Rate"
+    y = "Average Child Mortality Rate (per 1,000 born)"
   )
 
 ```
 
-![](images/Lowest Child Mortality Rate Countries)
+![](images/Lowest%20Child%20Mortality%20Rate%20Countries)
+
+It's important to note that many of these listed are geographically small microstates. Some plausible explinations for this is that these countries have higher GDP per capita which allows them to invest more heavily in healthcare, these countries have well-developed public health systems, or these countries have higher levels of education, especially among woman.
+
+More research should be done to compare these factors to child mortality rates in order to uncover the cause.
