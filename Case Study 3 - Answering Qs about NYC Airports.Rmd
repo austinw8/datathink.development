@@ -1,0 +1,119 @@
+---
+title: 'Case Study 3: Answering Qs about NYC Airports'
+author: "Austin Mangelson"
+date: "2024-06-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(nycflights13)
+library(tidyverse)
+library(ggplot2)
+library(quantreg)
+
+```
+
+## Introduction
+
+As a new intern for a NYC firm, my manager asked me to answer the following questions:
+
+1.  If I am leaving before noon, which two airlines do you recommend at each airport (JFK, LGA, EWR) that will have the lowest delay time at the 75th percentile?
+
+2.  Which origin airport is best to minimize my chances of a late arrival when I am using Delta Airlines?
+
+3.  Which destination airport is the worst (you decide on the metric for worst) airport for arrival time?
+
+The following report answers these questions.
+
+## Question 1: Recommended airlines from NYC airports with the lowest delay times.
+
+The first question was "*If I am leaving before noon, which two airlines do you recommend at each airport (JFK, LGA, EWR) that will have the lowest delay time at the 75th percentile?*".
+
+```{r top airports by 75th percentile, echo=FALSE}
+
+flights_filtered <- 
+  flights |> 
+  filter(sched_dep_time < 1200) |> #find flights before noon
+  group_by(origin, carrier) |> 
+  summarise(dep_delay_75th = quantile(dep_delay, 0.75, na.rm = TRUE)) |> #delays by carrier and airport
+  group_by(origin) |> 
+  top_n(2, dep_delay_75th) |> 
+  arrange(origin, dep_delay_75th) #top 2 carriers per airport
+view(flights_filtered)
+  
+ggplot(flights_filtered, aes(x = origin, y = dep_delay_75th, fill = carrier)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = c("blue", "darkblue", "lightblue", "skyblue", "cyan")) +
+  labs(
+    title = "Top 2 Airports by 75th Percentile Delay", 
+    subtitle = "Pre-noon departures",
+    x = "Airport",
+    y = "75th Percentile Delay (minutes)",
+  ) +
+  scale_fill_discrete(name = "Airline", labels = c("Endeavor Air", "Atlantic Southeast", "Skywest", "United Airlines", "ACES Colombia")) +
+  theme_bw()
+
+#output graph shows top 2 airlines recommended at each airport based on the 75th percentile departure delay for flights leaving before noon. 
+#Prioritizes airlines with shorter delays
+
+```
+
+This graph tells us that if you're leaving before noon, you'll find the lowest delay times from the EWR airport on Atlantic Southeast Airlines and United Airlines, Endeavor Air and ACES Colombia from the JFK airport, and Atlantic Southeast and Skywest from the LGA airport.
+
+Overall, I'd recommend trying to leave from the JFK airport as they have the lowest overall delay times across all mentioned airlines.
+
+## Question 2: Best origin airport to minimize late arrival on Delta.
+
+The following question was "*Which origin airport is best to minimize my chances of a late arrival when I am using Delta Airlines?*"
+
+```{r best airports with Delta, echo=FALSE}
+
+flights_filtered2 <- 
+  flights |> 
+  filter(carrier == "DL") |>  #find Delta flights only
+  group_by(origin) |> 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE)) |> #calculate average arrival delay for each origin airport
+  arrange(avg_arr_delay)
+
+ggplot(flights_filtered2, aes(x = origin, y = avg_arr_delay)) +
+  geom_bar(stat = "identity", fill = "darkblue") +
+  labs(
+    title = "Average Arrival Delay of NYC Airports",
+    subtitle = "Planes flying from JFK Airport arrive the earliest to their destination",
+    x = "Airport",
+    y = "Average Arrival Delay (minutes)"
+  ) +
+  theme_bw()
+
+```
+
+From this graph we learn that not only is leaving from the JFK airport your best chance of avoiding a late arrival when flying with Delta, but there's a decent chance you'll actually arrive a minute or two early! Woohoo!
+
+## Question 3: Worst airport for arriving on time.
+
+The final question asked was "*Which destination airport is the worst airport for arrival time?*"
+
+```{r worst destination airport, echo=FALSE}
+
+flights_filtered3 <- 
+  flights |> 
+  filter(origin %in% c("JFK", "EWR", "LGA")) |> 
+  group_by(dest) |> 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE)) |> 
+  slice_max(avg_arr_delay, n = 10)
+
+ggplot(flights_filtered3, aes(x = reorder(dest, -avg_arr_delay), y = avg_arr_delay)) +
+  geom_bar(stat = "identity", fill = "darkblue") +
+  labs(
+    title = "Average Arrival Delays", 
+    subtitle = "Destination Airports",
+    x = "Airport",
+    y = "Average Arrival Delay (minutes)"
+  ) +
+  theme_bw()
+
+```
+
+From this, we learn the top 10 worst airports to fly into from NYC, the top by name being the Colombia Metropolitan Airport (CAE) in West Columbia, South Carolina, the Tulsa International Airport (TUL) in Tulsa, Oklahoma, and the Will Rogers Airport (OKC) in Oklahoma City, OK. Statistically, you'll arrive at these airports about 30-40 minutes late... yikes!
