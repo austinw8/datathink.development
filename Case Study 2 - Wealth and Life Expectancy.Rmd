@@ -1,8 +1,23 @@
+---
+title: 'Case Study 2: Wealth and Life Expectancy'
+author: "Austin Mangelson"
+date: "2024-06-12"
+output: 
+  html_document:
+    code_folding: hide
+    echo: FALSE
+    warning: FALSE
+    message: FALSE
+---
+
+# Images
+
+```{r first graph, echo=FALSE, include=FALSE}
+# prepping data --------------------------------------------------
+
 library(tidyverse)
 library(gapminder)
 library(dplyr)
-view(gapminder)
-
 
 #filter out Kuwait and add "population per 100k" column
 gapminder2 <- 
@@ -28,6 +43,10 @@ ggplot(gapminder2, aes(x = lifeExp, y = gdpPercap)) +
     size = "Population (100k)",
     color = "Continent"
   )
+```
+
+
+```{r second graph}
 
 #create a weighted mean on the gdp
 weighted_data <- 
@@ -38,15 +57,11 @@ view(weighted_data)
 
 #creating GDP per year growth faceted by continent
 ggplot(gapminder2, aes(x = year, y = gdpPercap)) + 
-  geom_line(gapminder2, aes(
-    x = year,
-    y = gdpPercap,
+  geom_line(mapping = aes(
     color = continent, 
     group = country), 
     linewidth = 0.1) +
-  geom_point(gapminder2, aes(
-    x = year, 
-    y = gdpPercap, 
+  geom_point(mapping = aes(
     color = continent, 
     group = country),
     size = 0.5) +
@@ -67,3 +82,5 @@ ggplot(gapminder2, aes(x = year, y = gdpPercap)) +
     x = "Year",
     y = "GDP per capita",
     color = "Continent")
+```
+

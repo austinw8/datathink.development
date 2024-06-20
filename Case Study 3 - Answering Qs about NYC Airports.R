@@ -1,40 +1,13 @@
----
-title: 'Case Study 3: Answering Qs about NYC Airports'
-author: "Austin Mangelson"
-date: "2024-06-18"
-output: 
-  html_document:
-    code_folding: hide
-    echo: FALSE
-    warning: FALSE
----
-
-```{r setup, echo=FALSE, include=FALSE}
-
 library(nycflights13)
 library(tidyverse)
 library(ggplot2)
 library(quantreg)
+library(RColorBrewer)
+library(tidytext)
+View(flights)
 
-```
 
-## Introduction
-
-As a new intern for a NYC firm, my manager asked me to answer the following questions:
-
-1.  If I am leaving before noon, which two airlines do you recommend at each airport (JFK, LGA, EWR) that will have the lowest delay time at the 75th percentile?
-
-2.  Which origin airport is best to minimize my chances of a late arrival when I am using Delta Airlines?
-
-3.  Which destination airport is the worst (you decide on the metric for worst) airport for arrival time?
-
-The following report answers these questions.
-
-## Question 1: Recommended airlines from NYC airports with the lowest delay times.
-
-The first question was "*If I am leaving before noon, which two airlines do you recommend at each airport (JFK, LGA, EWR) that will have the lowest delay time at the 75th percentile?*".
-
-```{r top airports by 75th percentile, message=FALSE}
+#1. If I am leaving before noon, which two airlines do you recommend at each airport (JFK, LGA, EWR) that will have the lowest delay time at the 75th percentile? 
 
 flights_filtered <- 
   flights |> 
@@ -70,7 +43,7 @@ delays_EWR <-
 ggplot(delays_EWR, aes(x = reorder(carrier_full, -dep_delay_75th), y = dep_delay_75th)) +
   geom_col(fill = "darkblue") +
   labs(
-    title = "Best and worst pre-noon delays from the \nNewark Liberty International (EWR) Airport", 
+    title = "Best and worst pre-noon delays from the Newark Liberty International (EWR) Airport", 
     subtitle = "Silk Avia and Endeavor Air are most likely to depart on time",
     x = "Airline",
     y = "Departure Delay (minutes)",
@@ -85,7 +58,7 @@ delays_JFK <-
 ggplot(delays_JFK, aes(x = reorder(carrier_full, -dep_delay_75th), y = dep_delay_75th)) +
   geom_col(fill = "darkblue") +
   labs(
-    title = "Best and worst pre-noon delays from the \nJohn F. Kennedy International (JFK) Airport", 
+    title = "Best and worst pre-noon delays from the John F. Kennedy International (JFK) Airport", 
     subtitle = "Hawaiian Airlines and Delta Airlines are most likely to depart on time",
     x = "Airline",
     y = "Departure Delay (minutes)",
@@ -100,7 +73,7 @@ delays_LGA <-
 ggplot(delays_LGA, aes(x = reorder(carrier_full, -dep_delay_75th), y = dep_delay_75th)) +
   geom_col(fill = "darkblue") +
   labs(
-    title = "Best and worst pre-noon delays from the \nLaGuardia (LGA) Airport", 
+    title = "Best and worst pre-noon delays from the LaGuardia (LGA) Airport", 
     subtitle = "Silk Avia and Mesa Airlines are most likely to depart on time",
     x = "Airline",
     y = "Departure Delay (minutes)",
@@ -108,16 +81,9 @@ ggplot(delays_LGA, aes(x = reorder(carrier_full, -dep_delay_75th), y = dep_delay
   theme_bw() +
   coord_flip(ylim = c(-5, 70))
 
-```
-
-This graph tells us that if you're leaving before noon, you'll find the shortest delay times from Silk Avia and Endeavor Air if leaving from the EWR airport, Hawaiian Airlines and Delta Airlines from the JFK airport, and Silk Avia and Mesa Airlines from the LGA airport. 
 
 
-## Question 2: Best origin airport to minimize late arrival on Delta.
-
-The following question was "*Which origin airport is best to minimize my chances of a late arrival when I am using Delta Airlines?*"
-
-```{r best airports with Delta}
+#2.Which origin airport is best to minimize my chances of a late arrival when I am using Delta Airlines?
 
 flights_filtered2 <- 
   flights |> 
@@ -130,22 +96,14 @@ ggplot(flights_filtered2, aes(x = origin, y = avg_arr_delay)) +
   geom_bar(stat = "identity", fill = "darkblue") +
   labs(
     title = "Average Arrival Delay of NYC Airports",
-    subtitle = "Delta flights from JFK Airport arrive the earliest to their destination",
+    subtitle = "Planes flying from JFK Airport arrive the earliest to their destination",
     x = "Airport",
     y = "Average Arrival Delay (minutes)"
   ) +
   theme_bw()
 
-```
 
-From this graph we learn that not only is leaving from the JFK airport your best chance of avoiding a late arrival when flying with Delta, but there's a decent chance you'll actually arrive a minute or two early! Woohoo!
-
-
-## Question 3: Worst airport for arriving on time.
-
-The final question asked was "*Which destination airport is the worst airport for arrival time?*"
-
-```{r worst destination airport}
+#3. Which destination airport is the worst (you decide on the metric for worst) airport for arrival time?
 
 flights_filtered3 <- 
   flights |> 
@@ -164,9 +122,9 @@ ggplot(flights_filtered3, aes(x = reorder(dest, -avg_arr_delay), y = avg_arr_del
   ) +
   theme_bw()
 
-```
 
-From this, we learn the top 10 worst airports to fly into from NYC, the top by name being the Colombia Metropolitan Airport (CAE) in West Columbia, South Carolina, the Tulsa International Airport (TUL) in Tulsa, Oklahoma, and the Will Rogers Airport (OKC) in Oklahoma City, OK. Statistically, you'll arrive at these airports about 30-40 minutes late... yikes!
-
-
+#TESTS
+fivenum(flights$dep_delay)
+quantile(flights$dep_delay, na.rm = TRUE)
+lapply(flights[4:9], quantile, na.rm = TRUE)
 

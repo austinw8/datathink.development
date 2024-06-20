@@ -2,16 +2,15 @@
 title: 'Task 6: Exploring NCY Flight Data'
 author: "Austin Mangelson"
 date: "2024-06-17"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
+    echo: FALSE
+    warning: FALSE
+    message: FALSE
 ---
 
 I began this test searching for insightful relationships between two of the variables in the nycflights::flights data set.
-
-```{r setup, include=FALSE, eval=FALSE}
-View(flights)
-?flights
-
-```
 
 I was immediately interested in exploring the relationship between delay times and months of the year.
 
@@ -21,11 +20,14 @@ My initial assumption was that there would be greater delay times during the win
 
 However, I discovered that the highest average delay times occurred in the summer months of June and July, and actually were the lowest in October and November.
 
-```{r flight delays per month, echo=FALSE, include=FALSE}
+```{r setup, echo=FALSE, include=FALSE}
 library(nycflights13)
 library(ggplot2)
 library(tidyverse)
 library(dplyr)
+```
+
+```{r flight delays per month}
 
 avg_delay <- 
   flights |> 
@@ -35,7 +37,7 @@ avg_delay <-
 view(avg_delay)
 
 ggplot(avg_delay, aes(x = month, y = avg_delay_time)) +
-  geom_smooth(color = "darkblue", linewidth = 1.25) +
+  geom_smooth(color = "darkblue", linewidth = 1.25, method = "loess", formula = 'y ~ x') +
   theme_bw() +
   labs(
     title = "Higher Flight Delay Times in Summer Months",
@@ -45,11 +47,9 @@ ggplot(avg_delay, aes(x = month, y = avg_delay_time)) +
   scale_x_continuous(breaks = seq_along(month.name), labels = month.name)
 ```
 
-![](images/Higher Flight Delay times in summer months)
-
 My hypothesis was that this might be due to a higher number of flights in the summer months, leading to a higher average. But again, I was proved wrong when I counted the number of flights each month.
 
-```{r Number of flights per month, echo=FALSE, include=FALSE}
+```{r Number of flights per month}
 flights_per_month <- 
   flights |> 
   group_by(month) |> 
@@ -68,7 +68,6 @@ ggplot(flights_per_month, aes(x = month)) +
 
 ```
 
-![](images/number of flights per month)
 
 This revealed that the differences in number of flights per month is negligible, and that there is relatively no difference between the number of flights between the different seasons of the year.
 
@@ -76,7 +75,7 @@ This revealed that the differences in number of flights per month is negligible,
 
 My final question was about the distribution of delay times. Out of all the flights in 2013, how long were the delays usually? To answer this question, I plotted the departure time against the frequency of delays in hour chunks.
 
-```{r distribution of flight delays, echo=FALSE, include=FALSE}
+```{r distribution of flight delays}
 dep_delay_distr <- 
   flights |> 
   filter(dep_delay > 0, dep_delay < 900)
@@ -94,7 +93,6 @@ ggplot(dep_delay_distr, aes(x = dep_delay)) +
 
 ```
 
-![](images/distribution of delay times)
 
 From this, I learned that most delays are less than 1 hour long, although I was surprised by the significant number of delays longer than 1 hour.
 
