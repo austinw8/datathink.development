@@ -1,0 +1,133 @@
+---
+title: "Task 08 - World Data Investigations - pt. 2"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+# Understanding World Child Mortality
+
+My attempt here is to understand better the relationship between child mortality and other factors within a country to determine if there's any way to prevent or reduce it.
+
+## Child Mortality Rates vs. GDP
+
+To begin, let's explore how child mortality rates relate to the average GDP of countries throughout the world. Let's begin with all countries of the world together.
+
+```{r setup, echo=FALSE, include=FALSE}
+library(devtools)
+library(ourworldindata)
+library(ggplot2)
+library(tidyverse)
+install_github("drsimonj/ourworldindata")
+theme_set(theme_bw())
+```
+
+```{r GDP vs child mortality whole prep, echo=FALSE, include=FALSE}
+avg_gdp <- 
+  financing_healthcare |> 
+  group_by(country, continent) |> 
+  summarise(avg_gdp = mean(gdp, na.rm = TRUE), avg_child_mort = mean(child_mort, na.rm = TRUE))
+```
+
+```{r GDP vs child mortality whole}
+ggplot(avg_gdp, aes(x = avg_gdp, y = avg_child_mort)) +
+  geom_point(mapping = aes(color = "darkred")) +
+  geom_smooth(method = "lm", color = "red") + 
+  labs(
+    title = "As GDP rises, child mortailty rates decline",
+    x = "Average GDP (USD)",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  ) +
+  theme(legend.position = "none")
+```
+
+This graph tells us that although a bit weak, there is a definite correlation between a country's average GDP and their child mortality rates: as GDP rises, child mortality rates decrease.
+
+Next, let's see if this trend holds true an each continent independently.
+
+```{r GDP vs child mortality by continent}
+ggplot(avg_gdp, aes(x = avg_gdp, y = avg_child_mort, color = continent)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~continent) +
+  labs(
+    title = "Each continent has its own GDP vs. child mortality trend",
+    x = "Average GDP (USD)",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  ) +
+  theme(legend.position = "none")
+```
+
+In this graph we see a bit of a paradox. While the negative correlation between GDP and child mortality rates holds true for Africa, the Americas, and Europe, it's a different story for Oceania and Asia.
+
+In Oceania, there seems to be no correlation, or perhaps in incredibly small negative correlation. In Asia however, there is a positive correlation: higher GDP's trend toward higher mortality rates.
+
+This could be due to the SES (socioeconomic status) of Asian countries, although more research should be done to explore this further.
+
+## Child Mortality Rates vs. Life Expectancy
+
+Now let's see if there's any correlation between child mortality rates and life expectancy among countries.
+
+```{r child mortality vs life expectency whole}
+ggplot(financing_healthcare, aes(x = life_expectancy, y = child_mort)) +
+  geom_point(mapping = aes(color = "darkred")) +
+  labs(
+    title = "As life expectency rises, child mortality rates drop",
+    x = "Life Expectency",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  ) +
+  theme(legend.position = "none")
+```
+
+As you can see, there is a strong negative correlation between life expectancy and child mortality rates. This means that countries with higher child mortality rates tend to have lower life expectancy, and vice versa.
+
+Let's see if this trend holds true on each individual continent.
+
+```{r child mortality vs life expectency by continent}
+ggplot(financing_healthcare, aes(x = life_expectancy, y = child_mort)) +
+  geom_point(aes(color = continent)) +
+  facet_wrap(~continent) +
+  labs(
+    title = "As life expectency rises, child mortality rates drop",
+    x = "Life Expectency",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  ) +
+  theme(legend.position = "none")
+```
+
+Luckily for us, there is no paradox this time: the trend holds true. In each individual continent, life expectancy and average child mortality rates are negatively correlated.
+
+This is most likely due to the fact that child mortality and life expectancy are both influenced by the same factors: access to healthcare, nutrition and sanitation, and socioeconomic development.
+
+## Child Mortality Rates by Continent
+
+Finally, let's compare child mortality rates across the continents.
+
+```{r child mortality across continents}
+ggplot(data = subset(financing_healthcare, !is.na(continent))) +
+  geom_boxplot(aes(x = reorder(continent, child_mort, FUN = median), y = child_mort)) +
+  labs(
+    title = "Child mortality rates by continent",
+    subtitle = "Averages from 1800 - 2015",
+    x = "Continent",
+    y = "Average Child Mortality Rate (per 1,000 born)"
+  )
+```
+
+Here we learn that there are significant differences in child mortality rates between continents. Some countries, like Oceania and the Americas, have a much wider range of child mortality rates than others, such as Africa. We also learn that Africa and Asia have the highest median child mortality rates, while Oceania has the lowest.
+
+This tells us that there is unequal progress in reducing child mortality rates across the world.
+
+## Conclusion
+
+Child mortality rates are not equal across regions of the world. In some places, like Asia and Africa, child mortality rates are still high, or even trending upward with a growing economy.
+
+Luckily, we have examples to learn from. The same things that increase life expectancy improve child mortality rates as well, so we con focus on those measures.
+
+Where do we begin? Africa and Asia have the highest median rates, indicating a significant global burden of child mortality rates in those regions. Focusing resources and development effors on these continents will have the biggest impact on decreasing global child mortality rates.
