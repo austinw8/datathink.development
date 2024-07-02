@@ -86,7 +86,7 @@ buildings2 |>
   geom_bar(stat = "identity", position = "dodge") +
   scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
   theme_bw() +
-  scale_fill_manual(values=c("grey", "darkred")) +
+  scale_fill_manual(values=c("#D9B3BC", "darkred")) +
   labs(
     title = "Construction decreased significantly for full-service type restaurants",
     subtitle = "Quick service restaurants (fast food) sees a slight increase", 
@@ -110,7 +110,7 @@ buildings2 |>
   geom_bar(stat = "identity", position = "dodge") +
   scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
   theme_bw() +
-  scale_fill_manual(values=c("grey", "darkred")) +
+  scale_fill_manual(values=c("#D9B3BC", "darkred")) +
   facet_wrap(~county) +
   labs(
     title = "No consistency in restaurant construction growth/decline across counties",
@@ -219,7 +219,7 @@ buildings2 |>
   ggplot(buildings2, mapping = aes(x = reorder(county, -value_million), y = value_million, fill = Year)) +
   geom_bar(stat = "identity", position = "dodge") +
   scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
-  scale_fill_manual(values = c("darkred", "grey")) +
+  scale_fill_manual(values = c("darkred", "#D9B3BC")) +
   theme_bw() +
   labs(
     title = "Ada county spent the most on fast food construction in Idaho", 
