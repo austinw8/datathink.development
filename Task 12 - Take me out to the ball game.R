@@ -39,21 +39,29 @@ combined_stats <-
   left_join(college_playing, by = "playerID", relationship = "many-to-many") |> 
   left_join(schools, by = "schoolID", relationship = "many-to-many") |> 
   na.omit() |> 
-  select(yearID.x, playerID, teamID, salary, nameFirst, nameLast, schoolID, name_full, state)
-  #mutate(salary_adjusted = inflation_adjust(salary, 2017))
+  select(yearID.x, playerID, teamID, salary, nameFirst, nameLast, schoolID, name_full, state) |> 
+  rename(year = "yearID.x")
+ # mutate(salary_adjusted = inflation_adjust(salary, 2017))
 
+dummy <- inflation_adjust(base_date = "1985-01-01") |> 
+  group_by(year) |> 
+  summarise(adjusted_dollar = (first(adj_dollar_value))) |> 
+  mutate(year = as.numeric(year)) |> 
+  right_join(combined_stats, by = "year") |> 
+  mutate(`1985_adjusted_salay` = (salary / adjusted_dollar))
+             
 #plotting---------------
 
 plot_data <- 
-combined_stats |> 
+dummy |> 
   filter(state == "UT") |> 
-  group_by(yearID.x, name_full, state) |> 
+  group_by(year, name_full, state) |> 
   summarise(average_salary = mean((salary / 1000000), na.rm = TRUE))
 
 byu_players <- 
-  combined_stats |> 
+  dummy |> 
   filter(name_full == "Brigham Young University") |> 
-  group_by(yearID.x) |> 
+  group_by(year) |> 
   summarise(average_salary = mean(salary / 1000000))
 
 ggplot(plot_data, aes(x = reorder(name_full, -average_salary), y = average_salary, fill = name_full)) +

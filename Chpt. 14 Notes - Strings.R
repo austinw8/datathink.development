@@ -182,3 +182,41 @@ ggplot(babynames2, aes(x = reorder(first, -n), y = n)) +
   labs(
     title = "More 'A' names"
   )
+
+#-------------------------------------------------------------------------------
+
+x <- c("abc", NA)
+str_c("|-", x, "-|")
+str_c("|-", str_replace_na(x), "-|")
+
+name <- "Hadley"
+time_of_day <- "morning"
+birthday <- TRUE
+str_c("Good ", time_of_day, " ", name,
+      if (birthday) " and HAPPY BIRTHDAY",
+      ".")
+
+#turn a vector of strings into a single string
+str_c(c("x", "y", "z"), collapse = ", ")
+
+#subsetting
+fruit <- c("Apple", "Banana", "Pear")
+str_sub(fruit, 1, 3)
+str_sub(fruit, -3, -1)
+
+str_to_upper(c("i", "I"))
+str_to_upper(c("i", "I"), locale = "tr") #Turkish locale
+
+#paste() and paste0() concatenate strings, similat to str_c()
+str_c("x", "y", "z") #no seperation
+paste("x", "y", "z") #adds space between strings
+paste0()
+
+
+
+
+
+
+
+
+

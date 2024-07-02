@@ -1,0 +1,281 @@
+---
+title: "Case Study 6: The Collapse of Construction in Idaho"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+## Background
+
+In working with the Idaho Restaurant Commission (IRC), we're setting out to get a clearer picture of how restaurant construction changed across Idaho **from 2008 to 2009**.
+
+The data for this project, found [here](https://github.com/hathawayj/buildings), contains information on buildings built in Idaho during '08 and '09, information about each county, residential permits, and more.
+
+```{r setup, echo=FALSE}
+library(dplyr)
+library(tidyverse)
+library(devtools)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(forcats)
+
+devtools::install_github("hathawayj/buildings")
+
+climate_zone <- as_tibble(buildings::climate_zone_fips)
+buildings <- as_tibble(buildings::buildings0809)
+restaurants <- as_tibble(buildings::restaurants)
+permits <- as_tibble(buildings::permits)
+
+#predefined groups
+not_restaurants <- c("development","Food preperation center", "Food Services center","bakery","Grocery","conceession","Cafeteria", "lunchroom","school","facility"," hall ")
+standalone_retail <- c("Wine","Spirits","Liquor","Convenience","drugstore","Flying J", "Rite Aid ","walgreens ","Love's Travel ")
+full_service_type <- c("grains of montana", "souper salad", "chadders", "texas roadhouse", "applebee's", "wings", "Tuscanos", "Ristorante","mexican","pizza ","steakhouse","grill","buffet","tavern","bar","waffle","italian","steak house")
+quick_service_type <- c("chronic tacos", "panda express", "Mcdonald", "dutch", "Jimmy johns", "starbucks", "subway", "sonic", "coffee","java","Donut","Doughnut","burger", "smashburger", "Ice Cream ","custard ","sandwich ","fast food","bagel")
+quick_service_names <- restaurants$Restaurant[restaurants$Type %in% c("coffee","Ice Cream","Fast Food")]
+full_service_names <- restaurants$Restaurant[restaurants$Type %in% c("Pizza","Casual Dining","Fast Casual")]
+```
+
+## Exploring Questions for the ID Restaurant Commission
+
+Throughout this report we will be answering 4 questions for our IRC friends:
+
+1.  *How did full-service restaurant construction compare to quick service restaurant construction across county and years?*
+2.  *How did restaurant construction fare compare to the other commercial construction in Idaho?*
+3.  *Which county in Idaho spent the most on fast food construction each year?*
+4.  *In that county how did other commercial construction compare?*
+
+Let's jump in!
+
+### Question 1: How did full-service restaurant construction compare to quick service restaurant construction across county and years?
+
+```{r, data prep, echo=FALSE}
+buildings2 <- 
+  buildings |> 
+  left_join(climate_zone, by = c("FIPS.county", "FIPS.state")) |> 
+  filter(Type == "Food_Beverage_Service") |> 
+  mutate(ProjectTitle = str_to_lower(str_trim(ProjectTitle)),
+         category = case_when(
+           str_detect(ProjectTitle, str_c(tolower(not_restaurants), collapse = "|")) ~ "Not Restaurant",
+           str_detect(ProjectTitle, str_c(tolower(standalone_retail), collapse = "|")) ~ "Standalone Retail",
+           str_detect(ProjectTitle, str_c(tolower(full_service_type), collapse = "|")) ~ "Full Service Restaurant",
+           str_detect(ProjectTitle, str_c(tolower(quick_service_type), collapse = "|")) ~ "Quick Service Restaurant",
+           str_detect(ProjectTitle, str_c(tolower(not_restaurants), collapse = "|")) ~ "Not Restaurant",
+           SqFt >= 4000 ~ "Full Service Restaurant",
+           SqFt < 4000 & str_detect(ProjectTitle, "(?i)NEW") ~ "Quick Service Restaurant",
+           TRUE ~ "Unknown")) |> 
+  relocate(category, .after = ProjectTitle) |> 
+  mutate(county = str_replace(AreaName, " County", ""),
+         value_million = (Value1000 / 1000), ) |> 
+  select(Year, Month, ProjectTitle, category, City, value_million, county)
+```
+
+```{r graph 1}
+buildings2 |> 
+  filter(category %in% c("Full Service Restaurant", "Quick Service Restaurant")) |> 
+  group_by(county, Year, category) |> 
+  summarise(building_value = sum(value_million, na.rm = TRUE)) |> 
+  ggplot(buildings2, mapping = aes(x = Year, y = building_value, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
+  theme_bw() +
+  scale_fill_manual(values=c("grey", "darkred")) +
+  labs(
+    title = "Construction decreased significantly for full-service type restaurants",
+    subtitle = "Quick service restaurants (fast food) sees a slight increase", 
+    x = "",
+    y = "Amount spent on construction",
+    fill = "Restaurant Type")
+```
+
+It looks like from 2008 to 2009, full service restaurant construction decreased significantly, from about \$8.5 million down to a little less than \$3 million. This is significant, considering it was the larger of the two.
+
+Quick service restaurants experienced an increase from '08 to '09, although it wasn't anything significant.
+
+**This graph shows all of Idaho as a whole. Does this trend hold true across individual Idaho counties? Let's see!**
+
+```{r graph 2}
+buildings2 |> 
+  filter(category %in% c("Full Service Restaurant", "Quick Service Restaurant")) |> 
+  group_by(county, Year, category) |> 
+  summarise(building_value = sum(value_million, na.rm = TRUE)) |> 
+  ggplot(buildings2, mapping = aes(x = Year, y = building_value, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
+  theme_bw() +
+  scale_fill_manual(values=c("grey", "darkred")) +
+  facet_wrap(~county) +
+  labs(
+    title = "No consistency in restaurant construction growth/decline across counties",
+    x = "",
+    y = "Amount spent on construction",
+    fill = "Restaurant Type")
+```
+
+It turns out there is no discernible trend of full or quick service restaurant construction either increasing or decreasing among individual counties.
+
+### Question 2: How did restaurant construction fare compare to the other commercial construction in Idaho?
+
+```{r categorizing commercial construction, echo=FALSE}
+restaurants <- c("restaurant", "grains of montana", "souper salad", "chadders", "texas roadhouse", "applebee's", "wings", "Tuscanos", "Ristorante","mexican","pizza ","steakhouse","grill","buffet","tavern","bar","waffle","italian","steak house", "chronic tacos", "panda express", "Mcdonald", "dutch", "Jimmy johns", "starbucks", "subway", "sonic", "coffee","java","Donut","Doughnut","burger", "smashburger", "Ice Cream ","custard ","sandwich ","fast food","bagel", "coffee","Ice Cream","Fast Food", "Pizza","Casual Dining","Fast Casual")
+retail <- c("bakery", "concession", "conseession", "grocery", "fred meyer", "albertson", "shopping center", "shopping", "nail salon", "mall", "car wash", "retail", "Wine","Spirits","Liquor","Convenience","drugstore","pharmacy", "Flying J", "Rite Aid ","walgreen","Love's Travel ")
+wholesale <- c("costco", "wholesale", "warehouse", "winco", "supercenter")
+airport <- c("air", "terminal", "hanger", "hangar")
+medical <- c("clinic", "medicine", "healing", "medi", "dentist", "assisted living", "senior center", "detoxification", "dental", "eye clinic", "hospice", "paramedic", "medical", "doctor", "hospital", "physical therapy", "weight loss", "nurse", "nursing", "wellness")
+hospitality <- c("motel", "hotel", "holiday inn", "marriot")
+education <- c("library", "academy", "campus", "learning", "education", "classroom", "school", "college", "university", "research", "educational")
+recreation <- c("hockey", "casino", "recreation", "sport", "sports", "swim", "golf", "park", "playground", "pool", "gym", "theater", "theatre", "arena", "zoo")
+housing <- c("home", "apts", "town home", "apartment", "townhome", "townhouse", "condominium", "married student housing", "alpine village")
+religious <- c("faith", "church", "catholic", "stake center")
+financial <- c("bank", "credit union")
+industrial <- c("gas", "gas station", "storage", "auto", "lube shop", "railhead", "factory", "industrial", "parking", "garage", "Food preperation center", "Food Services center")
+government <- c("county", "national guard", "army", "veteran", "fire station")
+
+commercial_categories <- 
+  buildings |> 
+  left_join(climate_zone, by = c("FIPS.county", "FIPS.state")) |> 
+  mutate(ProjectTitle = str_to_lower(str_trim(ProjectTitle)),
+         category = case_when(
+           str_detect(ProjectTitle, str_c(tolower(restaurants), collapse = "|")) ~ "Restaurant",
+           str_detect(ProjectTitle, str_c(tolower(retail), collapse = "|")) ~ "Retail",
+           str_detect(ProjectTitle, str_c(tolower(wholesale), collapse = "|")) ~ "Wholesale",
+           str_detect(ProjectTitle, str_c(tolower(airport), collapse = "|")) ~ "Airport",
+           str_detect(ProjectTitle, str_c(tolower(medical), collapse = "|")) ~ "Medical",
+           str_detect(ProjectTitle, str_c(tolower(education), collapse = "|")) ~ "Education",
+           str_detect(ProjectTitle, str_c(tolower(hospitality), collapse = "|")) ~ "Hospitality",
+           str_detect(ProjectTitle, str_c(tolower(recreation), collapse = "|")) ~ "Recreation",
+           str_detect(ProjectTitle, str_c(tolower(housing), collapse = "|")) ~ "Housing",
+           str_detect(ProjectTitle, str_c(tolower(religious), collapse = "|")) ~ "Religious",
+           str_detect(ProjectTitle, str_c(tolower(financial), collapse = "|")) ~ "Financial",
+           str_detect(ProjectTitle, str_c(tolower(industrial), collapse = "|")) ~ "Industrial",
+           str_detect(ProjectTitle, str_c(tolower(government), collapse = "|")) ~ "Government",
+           TRUE ~ "Unknown")) |> 
+  relocate(category, .after = ProjectTitle) |> 
+  select(-Census.FIPS, -FIPS.county, -FIPS.state) |> 
+  filter(category != "Unknown")
+```
+
+Before looking at how much money was spend within different construction categories, let's first see where how many restaurant construction projects there were compared to other projects.
+
+```{r commercial construction project type count}
+ggplot(commercial_categories, mapping = aes(x = fct_infreq(category), fill = category)) +
+  geom_bar() +
+  theme_bw() +
+  scale_fill_manual(values=c("grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "darkred", "grey", "grey")) +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "Restaurants are the 4th most common commercial construction project type", 
+    subtitle = "Between 2008-2009", 
+    x = "Construction category",
+    y = "Number of projects"
+  )
+```
+
+Now let's see how the spending on restaurant construction compares to other spending.
+
+```{r commercial construction category spending}
+commercial_categories_2 <- 
+  commercial_categories |> 
+  group_by(category) |> 
+  mutate(value_million = (Value1000 / 1000)) |> 
+  summarise(building_value_mil = sum(value_million, na.rm = TRUE))
+
+ggplot(commercial_categories_2, aes(x = reorder(category, -building_value_mil), y = building_value_mil, fill = category)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
+  scale_fill_manual(values = c("grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "darkred", "grey", "grey")) +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "Restaurants rank as the 8th highest category in commercial construction spending", 
+    subtitle = "Between 2008-2009",
+    x = "Construction category",
+    y = "Amount spent"
+  )
+```
+
+Although restaurant construction is the 4th most common commercial construction project type, it falls 8th among amounts of money spent.
+
+Why is this? Although this isn't the scope of this project, a possible explanation is that while relatively common in number, restaurant construction involves smaller expenditures (perhaps due to smaller footprints or less complex structural requirements) than something like a medical facility or high-rise office would require. Consequently, there restaurants would have shorter planning and construction periods, leading to lower accumulated costs over time.
+
+More research should be done if this is an area of interest for the IRC.
+
+### Question 3: Which county in Idaho spent the most on fast food construction each year?
+
+```{r fast food construction by county}
+buildings2 |> 
+  group_by(county, category, Year) |> 
+  summarise(value_million = sum(value_million, na.rm = TRUE)) |>
+  filter(category == "Quick Service Restaurant") |> 
+  ggplot(buildings2, mapping = aes(x = reorder(county, -value_million), y = value_million, fill = Year)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
+  scale_fill_manual(values = c("darkred", "grey")) +
+  theme_bw() +
+  labs(
+    title = "Ada county spent the most on fast food construction in Idaho", 
+    subtitle = "In both 2008 and 2009", 
+    x = "County", 
+    y = "Spending on fast food construction"
+  )
+```
+
+Interestingly, only 4 counties in Idaho spent money on fast food construction. Of those, Ada county spent the most, also being the only county to spend on fast food construction in 2009.
+
+### Question 4: In that county, how did other commercial construction compare?
+
+```{r data prep 2, echo=FALSE}
+commercial_categories_2 <- 
+  buildings |> 
+  left_join(climate_zone, by = c("FIPS.county", "FIPS.state")) |> 
+  mutate(ProjectTitle = str_to_lower(str_trim(ProjectTitle)),
+         category = case_when(
+           str_detect(ProjectTitle, str_c(tolower(restaurants), collapse = "|")) ~ "Restaurant",
+           str_detect(ProjectTitle, str_c(tolower(retail), collapse = "|")) ~ "Retail",
+           str_detect(ProjectTitle, str_c(tolower(wholesale), collapse = "|")) ~ "Wholesale",
+           str_detect(ProjectTitle, str_c(tolower(airport), collapse = "|")) ~ "Airport",
+           str_detect(ProjectTitle, str_c(tolower(medical), collapse = "|")) ~ "Medical",
+           str_detect(ProjectTitle, str_c(tolower(education), collapse = "|")) ~ "Education",
+           str_detect(ProjectTitle, str_c(tolower(hospitality), collapse = "|")) ~ "Hospitality",
+           str_detect(ProjectTitle, str_c(tolower(recreation), collapse = "|")) ~ "Recreation",
+           str_detect(ProjectTitle, str_c(tolower(housing), collapse = "|")) ~ "Housing",
+           str_detect(ProjectTitle, str_c(tolower(religious), collapse = "|")) ~ "Religious",
+           str_detect(ProjectTitle, str_c(tolower(financial), collapse = "|")) ~ "Financial",
+           str_detect(ProjectTitle, str_c(tolower(industrial), collapse = "|")) ~ "Industrial",
+           str_detect(ProjectTitle, str_c(tolower(government), collapse = "|")) ~ "Government",
+           TRUE ~ "Unknown")) |> 
+  relocate(category, .after = ProjectTitle) |> 
+  mutate(county = str_replace(AreaName, " County", "")) |> 
+  select(-Census.FIPS, -FIPS.county, -FIPS.state) |> 
+  filter(category != "Unknown", county == "Ada") |> 
+  mutate(value_million = (Value1000 / 1000)) |> 
+  group_by(category) |> 
+  summarise(building_value_mil = sum(value_million, na.rm = TRUE))
+```
+
+```{r graph}
+ggplot(commercial_categories_2, aes(x = reorder(category, -building_value_mil), y = building_value_mil, fill = category)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_y_continuous(labels = label_dollar(prefix = "$", suffix = "m")) +
+  scale_fill_manual(values = c("grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "grey", "darkred", "grey", "grey")) +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "Restaurant in Ada County, ID remain the 8th highest category in commercial construction spending",
+    subtitle = "Between 2008-2009",
+    x = "Construction Category", 
+    y = "Amount spent"
+  )
+```
+
+Comparing commercial construction by category in Ada county looks familiar. It follows the same trend as the comparison among all of Idaho: restaurant construction remains the 8th highest category of commercial construction spending.
