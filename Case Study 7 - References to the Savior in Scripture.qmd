@@ -1,0 +1,169 @@
+---
+title: "References to the Savior in Scripture"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+*The Book of Mormon* has been criticized since it's first publication as heresy. Many religious individuals, in and out of Christianity, even consider the book non-Christian, despite having the subtitle "*Another Testament of **Jesus Christ".***
+
+Susan Easton Black wrote in the [Ensign magazine](https://www.churchofjesuschrist.org/study/ensign/1978/07/discovery/names-of-christ-in-the-book-of-mormon?lang=eng&id=html) that "*even statistically, he is the dominant figure of the Book of Mormon*". I want to add to Susan's report by taking a look at references to the Savior within the Book of Mormon and other religious texts.
+
+<br>
+
+## Frequency of References to Jesus Christ in the Book of Mormon
+
+Jesus Christ is known by many different names and titles. Some are as short as "*God"* ([1 Nephi 1:1](https://www.churchofjesuschrist.org/study/scriptures/bofm/1-ne/1?lang=eng)) while others are as long as "*the Father of the heavens and of the earth, and all things that in them are"* ([Ether 4:7](https://www.churchofjesuschrist.org/study/scriptures/bofm/ether/4?lang=eng)*).* Other common names for the Savior include (but aren't limited to): Lord, Son of man, the Lamb of God, King of Heaven, Maker, Messiah, Redeemer, Good Shepard, Emmanuel, and more.
+
+Let's first take a look at the total number of references to the Savior found in the Book of Mormon.
+
+```{r setup, echo=FALSE}
+
+library(tidyverse)
+library(tidyr)
+library(ggplot2)
+library(purrr)
+library(stringr)
+library(stringi)
+library(rio)
+library(readr)
+library(dplyr)
+library(DescTools)
+
+scriptures <- rio::import("http://scriptures.nephi.org/downloads/lds-scriptures.csv.zip")
+savior_names <-readRDS(gzcon(url("https://byuistats.github.io/M335/data/BoM_SaviorNames.rds")))
+
+```
+
+```{r ref in BOM}
+
+book_of_mormon <- scriptures |> 
+  filter(volume_title == "Book of Mormon") |> 
+  select(volume_title, book_title, chapter_number:verse_title)
+
+savior_pattern <- paste(savior_names$name, collapse = "|")
+
+book_order <- c("1 Nephi", "2 Nephi", "Jacob", "Enos", "Jarom", "Omni", "Words of Mormon", "Mosiah", "Alma", "Helaman", "3 Nephi", "4 Nephi", "Mormon", "Ether", "Moroni")
+
+bom_references <- book_of_mormon |> 
+  mutate(num_ref = str_count(scripture_text, savior_pattern)) |> 
+  group_by(book_title) |> 
+  summarise(total_ref = sum(num_ref),
+            verse_count = n()) |> 
+  mutate(book_title = factor(book_title, levels = book_order))
+  
+
+ggplot(bom_references, aes(x = book_title, y = total_ref, fill = book_title)) +
+  geom_bar(stat = "identity", fill = "#42558C") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(
+    title = "References to the Savior by books in the Book of Mormon",
+    x = "", 
+    y = "Number of References"
+  )
+
+```
+
+In total, there are 4,070 references to the Savior throughout the entire book. With a total of 6,604 verses, that means an **average of one reference to Christ every 1.6 verses!**
+
+Now let's see how these references are distributed throughout the Book of Mormon.
+
+```{r Savior references in BOM}
+book_of_mormon <- scriptures |> 
+  filter(volume_title == "Book of Mormon") |> 
+  select(volume_title, book_title, chapter_number:verse_title)
+
+savior_pattern <- paste(savior_names$name, collapse = "|")
+
+#function to count words between Savior names
+words_between <- function(text, pattern) {
+  locations <- str_locate_all(text, pattern)[[1]]
+  words <- unlist(strsplit(text, "\\s+"))
+  distances <- numeric()
+  
+  if (nrow(locations) > 1) {
+    start_indices <- c(1, locations[, 2] + 1)
+    end_indices <- c(locations[, 1] - 1, nchar(text))
+    
+    for (i in 2:length(start_indices)) {
+      distance <- sum(str_count(substr(text, start_indices[i-1], end_indices[i-1]), "\\S+"))
+      distances <- c(distances, distance)
+    }
+  }
+  
+  distances
+}
+
+#-----------------------------------------
+
+savior_pattern <- paste(savior_names$name, collapse = "|")
+all_bom <- paste(book_of_mormon$scripture_text, collapse = " ")
+words_between_savior_names_bom <- data.frame(words_between(all_bom, savior_pattern))
+
+ggplot(words_between_savior_names_bom, aes(x = words_between.all_bom..savior_pattern.)) +
+  geom_boxplot(outlier.shape = NA) +
+  coord_cartesian(xlim = c(0, 160)) +
+  theme_minimal() +
+  theme(axis.text.y = element_blank()) +
+  scale_x_continuous(n.breaks = 10) +
+  labs(
+    title = "Frequent references to the Savior in the Book of Mormon",
+    x = "Number of words between Savior references", 
+    y = ""
+  )
+```
+
+This might look a bit confusing, so let's break it down.
+
+-   The **left line** in the box tells us that 25% of references to the Savior had 16 words or fewer, meaning a *frequent mention of Christ within short passages of text*.
+
+-   The **middle line** indicates that *in a typical case, a reference to Christ is found within 34 words of another reference to Him*.
+
+-   The **right line** of the box means that three quarters of references to Christ are found within 72 words of each other, demonstrating that *a large majority of Christ references are relatively close together within the scriptures*.
+
+<br>
+
+There are 3 important numbers not referenced in the plot that are important to note:
+
+| Most frequent word gap                                                           | Maximum word gap                                                               | Average word gap                                    |
+|---------------------------|--------------------------|-------------------|
+| 2                                                                                | 4,027                                                                          | 65                                                  |
+| There are many instances where references to the Savior are very close together. | Although rare, there are occasional long intervals between mentions of Christ. | On average, the Savior is mentioned every 65 words. |
+
+<br>
+
+## Comparing the Book of Mormon to Other Scripture
+
+After learning how often Christ is referenced in the Book of Mormon, I was extremely interested in how this book compares to other canonized scripture.
+
+```{r comparison between books}
+
+avg_ref_gap <- data.frame(book_title = c("Book of Mormon", "New Testament", "Old Testament", "Doctrine and Covenants", "Pearl of Great Price"),
+                          avg_ref_gap = c(64.81843, 46.55721, 165.8753, 70.70626, 49.49427))
+  
+
+ggplot(avg_ref_gap, aes(x = reorder(book_title, -avg_ref_gap), y = avg_ref_gap, fill = book_title)) +
+  geom_bar(stat = "identity", color = "grey", linewidth = 0.5) +
+  scale_fill_manual(values = c("#42558C", "#558c42", "#8c4255", "#d4af37", "ivory")) +
+  theme_minimal() +
+  labs(
+    title = "The New Testament References Jesus Christ most often, Old Testament the least", 
+    x = "", 
+    y = "Average # of Words Between References"
+  ) +
+  theme(legend.position = "none")
+
+
+```
+
+\***Important note**: This bar graph displays the [*average number of words in between references*]{.underline} to Jesus Christ (meaning a lower bar signifies less words in between references, AKA the Savior is referenced more often... make sense? ;)
+
+As it turns out, the Savior is referenced the most frequently in the New Testament (which makes sense, seeing how the New Testament is a record of His life on Earth) and least frequently in the Old Testament (which is primarily a record of the ancient Israelite, or Hebrew, people), with the Book of Mormon falling happily in the middle.

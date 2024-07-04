@@ -1,0 +1,180 @@
+---
+title: "\"And it came to pass...\""
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+<br>
+
+Mark Twain, the celebrated American writer most famous for *The Adventures of Tom Sawyer* and *The Adventures of Huckleberry Finn*, got his hands on a copy of the Book of Mormon while on a trip to Salt Lake City in 1861. To put it mildly, he wasn't a big fan.
+
+"*It is chloroform in print,*" Twain wrote. "*If Joseph Smith composed this book, the act was a miracle - keeping awake while he did it was, at any rate.*"
+
+But one thing Mark Twain mentioned in his review of the Book of Mormon will resonate with just about any reader. "*'And it came to pass' was his pet. If he had left that out, his Bible would have been only a pamphlet.*"
+
+Any reader of the Book of Mormon will quickly realize just how many times the phrase '*and it came to pass*' appears. But just how many times, exactly? Although meant sarcastically, just how true is the claim that the Book of Mormon would be significantly shorter without the phrase '*and it came to pass*'?
+
+<br>
+
+## Number of Appearances
+
+Overall, the phrase '*and it came to pass*' appears in the Book of Mormon 1,127 times. <br>
+
+| Book Title      | "*And it came to pass*"-o-meter |
+|-----------------|---------------------------------|
+| 1 Nephi         | 187                             |
+| 2 Nephi         | 13                              |
+| Jacob           | 43                              |
+| Enos            | 3                               |
+| Jarom           | 4                               |
+| Omni            | 8                               |
+| Words of Mormon | 3                               |
+| Mosiah          | 115                             |
+| Alma            | 313                             |
+| Helaman         | 101                             |
+| 3 Nephi         | 18                              |
+| 4 Nephi         | 18                              |
+| Mormon          | 57                              |
+| Ether           | 161                             |
+| Moroni          | 0                               |
+| **Total**       | **1,127**                       |
+
+That seems like a lot! But is it really? How does removing this phrase change the length of the book?
+
+<br>
+
+## Without the phrase "*and it came to pass*"
+
+There are a total of 1,406,719 words in the Book of Mormon. That puts our 1,127 from the "*and it came to pass*"-o-meter into a bit of perspective.
+
+```{r setup, echo=FALSE}
+
+library(purrr)
+library(tidyverse)
+library(stringr)
+library(stringi)
+library(janitor)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+scriptures <- read_csv("../Data Sets/lds-scriptures.csv")
+
+
+# Data Prep ---------------------------------------------------------------
+
+scriptures <- scriptures |> 
+  mutate(word_count = str_count(scripture_text),
+         jesus_count = str_count(scripture_text, "Jesus"),
+         scripture_text = str_to_lower(scripture_text),
+         came_to_pass_count = str_count(scripture_text, 'for it came to pass|and it came to pass'))
+
+```
+
+```{r plot 1, warning=FALSE, message=FALSE}
+
+book_of_mormon <- scriptures |> 
+  filter(volume_title == "Book of Mormon")
+
+book_of_mormon_3 <-  book_of_mormon |> 
+  mutate(text_without_came_to_pass = str_replace_all(scripture_text, 'for it came to pass|and it came to pass', "")) |> 
+  mutate(new_word_count = str_count(text_without_came_to_pass)) |> 
+  select(-volume_id, -book_id, -chapter_id, -verse_id, -volume_long_title, -book_long_title, -book_subtitle, -volume_short_title, -volume_lds_url, -book_lds_url)
+
+
+book_of_mormon_word_count_3 <- 
+  book_of_mormon_3 |> 
+  group_by(volume_title) |> 
+  summarise(word_count = sum(word_count),
+            Count_without_came_to_pass = sum(new_word_count)
+  ) |> 
+  pivot_longer(cols = c("word_count", "Count_without_came_to_pass"), 
+               names_to = "count_type", 
+               values_to = "word_count") |> 
+  mutate(count_type = fct_recode(count_type,
+                                 "WITHOUT phrase" = "Count_without_came_to_pass",
+                                 "WITH phrase" = "word_count")) |> 
+  mutate(word_count_per_1000 = word_count / 1000)
+  
+book_of_mormon_word_count_3$count_type <- factor(book_of_mormon_word_count_3$count_type, levels = c("WITH phrase", "WITHOUT phrase"))
+
+
+ggplot(book_of_mormon_word_count_3, aes(x = volume_title, y = word_count_per_1000, fill = count_type)) +
+  geom_bar(stat = "identity", position = "dodge", color = "white") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#024B7A", "#44B7C2")) +
+  labs(
+    title = "Removing the phrase \"and it came to pass\" from the Book of Mormon",
+    subtitle = "Doing so only removes 1.23% of the BOM word count",
+    x = "", 
+    y = "Word Count (per 1,000)", 
+    fill = ""
+  ) +
+  scale_y_continuous(n.breaks = 8)
+
+
+```
+
+Let's break that down by each book in the Book of Mormon.
+
+```{r test, echo=FALSE}
+
+book_of_mormon_word_count <- book_of_mormon_3 |> 
+  group_by(book_title) |> 
+  summarise(word_count = sum(word_count),
+            Count_without_came_to_pass = sum(new_word_count)) |> 
+  #adorn_totals("row") |> 
+  mutate(percentage_retained = (Count_without_came_to_pass / word_count) * 100) |> 
+  mutate(percentage_lost = ((word_count - Count_without_came_to_pass) / word_count) * 100)
+
+book_order <- c("1 Nephi", "2 Nephi", "Jacob", "Enos", "Jarom", "Omni", "Words of Mormon", "Mosiah", "Alma", "Helaman", "3 Nephi", "4 Nephi", "Mormon", "Ether", "Moroni")
+
+book_of_mormon_word_count_2 <- book_of_mormon_word_count |> 
+  pivot_longer(cols = c("word_count", "Count_without_came_to_pass"), 
+               names_to = "count_type", 
+               values_to = "word_count") |> 
+  mutate(count_type = fct_recode(count_type,
+                                 "WITHOUT phrase" = "Count_without_came_to_pass",
+                                 "WITH phrase" = "word_count")) |> 
+  mutate(word_count_per_1000 = word_count / 1000)
+book_of_mormon_word_count_2$book_title <- factor(book_of_mormon_word_count_2$book_title, levels = book_order)
+
+```
+
+```{r plot 2, warning=FALSE, message=FALSE}
+
+book_of_mormon_word_count_2$count_type <- factor(book_of_mormon_word_count_2$count_type, levels = c("WITH phrase", "WITHOUT phrase"))
+
+
+ggplot(book_of_mormon_word_count_2, aes(x = book_title, y = word_count_per_1000, fill = count_type)) +
+  geom_bar(stat = "identity", position = "dodge", color = "white") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#024B7A", "#44B7C2")) +
+  labs(
+    title = "Removing the phrase \"and it came to pass\" by book",
+    subtitle = "Doing so only removes 1.23% of the BOM word count",
+    x = "Book Title", 
+    y = "Word Count (per 1,000)", 
+    fill = ""
+  ) +
+  scale_y_continuous(n.breaks = 10) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+
+```
+
+Removing the phrase "*and it came to pass*" from the Mormon still leaves **99.77%** of the book to be read!
+
+<br>
+
+## Was Mark Twain right?
+
+Of course, Mark Twain was being quite sarcastic and caustic with his words. But in short, he was wrong. Seeing how a pamphlet only contains anywhere from 200 - 450 words, the remaining 1,385,306 words of the Book of Mormon certainly wouldn't fit on the page. Unless Twain meant to say brochure....
