@@ -1,6 +1,7 @@
 #Task 11
 library(stringr)
 library(tidyverse)
+library(htmlwidgets)
 
 letters <- read_lines("https://byuistats.github.io/M335/data/randomletters.txt")
 letters_numbers <- read_lines("https://byuistats.github.io/M335/data/randomletters_wnumbers.txt")

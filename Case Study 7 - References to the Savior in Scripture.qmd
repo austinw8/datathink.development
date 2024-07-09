@@ -155,7 +155,8 @@ ggplot(avg_ref_gap, aes(x = reorder(book_title, -avg_ref_gap), y = avg_ref_gap, 
   scale_fill_manual(values = c("#42558C", "#558c42", "#8c4255", "#d4af37", "ivory")) +
   theme_minimal() +
   labs(
-    title = "The New Testament References Jesus Christ most often, Old Testament the least", 
+    title = "The New Testament References Jesus Christ most often",
+    subtitle = "The Old Testament references Him the least",
     x = "", 
     y = "Average # of Words Between References"
   ) +
