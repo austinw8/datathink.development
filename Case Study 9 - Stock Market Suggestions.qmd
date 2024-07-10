@@ -1,0 +1,297 @@
+---
+title: "Case Study 9 - Stock Market Suggestions"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+```{r setup}
+library(tidyverse)
+library(tidyquant)
+library(dygraphs)
+library(plotly)
+library(lubridate)
+```
+
+With an extra \$25,000 to invest in the stock market, my ""savvy investment" friend has come to me with 10 stocks he has been watching during the last year. These stocks are:
+
+1.  Corecivis (*CXW*)
+
+2.  Ford Motor (*F*)
+
+3.  General Motor (*GM*)
+
+4.  Kroger (*KR*)
+
+5.  Western Digital (*WDC*)
+
+6.  Nike (*NKE*)
+
+7.  AT&T (*T*)
+
+8.  Workday (*WDAY*)
+
+9.  Wells Fargo (*WFC*)
+
+10. Walmart (*WMT*)
+
+In order to determine the best stocks to invest into, let's look interactively at their last 5 years of performance.
+
+```{r}
+
+tickers <- c("CXW", "F", "GM", "KR", "WDC", "NKE","T", "WDAY", "WFC", "WMT")
+
+ticker_stocks <- tq_get(tickers, get = "stock.prices", from = (today() - years(5)), to = today())
+
+ticker_stocks |> 
+  select(symbol, date, adjusted) |> 
+  pivot_wider(names_from = symbol, values_from = adjusted) |> 
+  dygraph(main = "Stock Prices Over Time") |> 
+  dyRangeSelector() |> 
+  dyAxis("y", label = "Adjusted Returns")
+```
+
+<br>
+
+## Highest Performers in Past Years
+
+We're not just interested in the stocks with the highest prices. We want to know which stocks have performed the best. Below are these 10 stocks in order of highest return over the past 5 years.
+
+```{r highest return stocks past 5 years}
+
+slopes <- ticker_stocks |> 
+  group_by(symbol) |> 
+  summarise(slope = coef(lm(adjusted ~ date))[2])
+
+ordered_stocks <- slopes |> 
+  arrange(desc(slope)) |> 
+  pull(symbol)
+
+ggplot(ticker_stocks, aes(x = date, y = adjusted, color = symbol)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~factor(symbol, levels = ordered_stocks), ncol = 5) +
+  theme_bw() +
+  theme(axis.text = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(
+    title = "Highest Returns over Past 5 Years",
+    x = "",
+    y = "Adjusted Return Price"
+  )
+  
+
+```
+
+**Workday, Kroger, Walmart, Wells Fargo, and Ford Motors** all show positive returns over the past 5 years. But what about the most recent year? We want to know which of these stocks has been performing well most recently.
+
+```{r highest return stocks past 1 year}
+
+slopes_one_yr <- ticker_stocks |> 
+  filter(date >= (today() - years(1))) |> 
+  group_by(symbol) |> 
+  summarise(slope = coef(lm(adjusted ~ date))[2])
+
+ordered_stocks_one_yr <- slopes_one_yr |> 
+  arrange(desc(slope)) |> 
+  pull(symbol)
+
+ticker_stocks |> 
+  filter(date >= (today() - years(1))) |> 
+  ggplot(aes(x = date, y = adjusted, color = symbol)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~factor(symbol, levels = ordered_stocks_one_yr), ncol = 5) +
+  theme_bw() +
+  theme(axis.text = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+   labs(
+    title = "Highest Returns Over Past Year",
+    x = "",
+    y = "Adjusted Return Price"
+  )
+
+```
+
+Within the past year, **Western Digital, Workday, Wells Fargo, General Motors, and Walmart** have have the highest increase in prices, and therefore would have yielded the highest returns.
+
+<br>
+
+## Stock Prices vs. Volume
+
+Between the highest returns over the past 5 years and year -to-date **Workday, Walmart, and Wells Fargo** have consistently been leading the pack. Because of their consistent and stong posivite returns, let's take a closer look at these 3 stocks.
+
+We'll look specifically at their adjusted stock prices compared to their volumes.
+
+```{r Workday (WDAY) Stock Prices vs Volume}
+
+ticker_stocks |> 
+  filter(date >= (today() - years(1)),
+         symbol == "WDAY") |> 
+  mutate(week = floor_date(date, "week")) |> 
+  group_by(week) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low),
+            close = last(close),
+            volume = sum(volume / 1000000),
+            adjusted = mean(adjusted)) |> 
+ggplot(aes(x = week)) +
+  geom_bar(aes(y = volume), stat = "identity", fill = "#377EB8", alpha = 0.5) +
+  geom_line(aes(y = 0.05*adjusted), stat = "identity", color = "#E41A1C", size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*20, name = "Price")) +
+  labs(
+    title = "Workday (WDAY) Stock Prices (red) vs. Volume (blue)",
+    x = "",
+    y = "Volume (per million)",
+    subtitle = "YTD"
+  ) +
+  theme_bw()
+```
+
+```{r Walmart (WMT) Stock Prices vs Volume}
+
+ticker_stocks |> 
+  filter(date >= (today() - years(1)),
+         symbol == "WMT") |> 
+  mutate(week = floor_date(date, "week")) |> 
+  group_by(week) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low),
+            close = last(close),
+            volume = sum(volume / 1000000),
+            adjusted = mean(adjusted)) |> 
+ggplot(aes(x = week)) +
+  geom_bar(aes(y = volume), stat = "identity", fill = "#377EB8", alpha = 0.5) +
+  geom_line(aes(y = 2*adjusted), stat = "identity", color = "#E41A1C", size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*0.5, name = "Price")) +
+  labs(
+    title = "Walmart (WMT) Stock Prices (red) vs. Volume (blue)",
+    x = "",
+    y = "Volume (per million)",
+    subtitle = "YTD"
+  ) +
+  theme_bw()
+```
+
+```{r Wells Fargo (WFC) Stock Prices vs Volume}
+
+ticker_stocks |> 
+  filter(date >= (today() - years(1)),
+         symbol == "WFC") |> 
+  mutate(week = floor_date(date, "week")) |> 
+  group_by(week) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low),
+            close = last(close),
+            volume = sum(volume / 1000000),
+            adjusted = mean(adjusted)) |> 
+ggplot(aes(x = week)) +
+  geom_bar(aes(y = volume), stat = "identity", fill = "#377EB8", alpha = 0.5) +
+  geom_line(aes(y = 2*adjusted), stat = "identity", color = "#E41A1C", size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*0.5, name = "Price")) +
+  labs(
+    title = "Wells fargo (WFC) Stock Prices (red) vs. Volume (blue)",
+    x = "",
+    y = "Volume (per million)",
+    subtitle = "YTD"
+  ) +
+  theme_bw()
+```
+
+## Conclusion
+
+With a steady increase and high trade volume for each of these stocks, these would be the 3 of the original 10 suggested stocks that I would personally choose to invest in.
+
+```{r unused individual stock volume vs price comparison, eval=FALSE}
+
+#Nike (NKE)
+ticker_stocks |> 
+  filter(date >= (today() - years(1)),
+         symbol == "NKE") |> 
+  mutate(week = floor_date(date, "week")) |> 
+  group_by(week) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low),
+            close = last(close),
+            volume = sum(volume / 1000000),
+            adjusted = mean(adjusted)) |> 
+ggplot(aes(x = week)) +
+  geom_bar(aes(y = volume), stat = "identity", fill = "#377EB8", alpha = 0.5) +
+  geom_line(aes(y = 0.5*adjusted), stat = "identity", color = "#E41A1C", size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*2, name = "Price")) +
+  labs(
+    title = "Nike (NKE) Stock Prices vs. Volume",
+    x = "",
+    y = "Volume (per million)"
+  )
+
+#CXW
+ticker_stocks |> 
+  filter(date >= (today() - years(1)),
+         symbol == "CXW") |> 
+  mutate(week = floor_date(date, "week")) |> 
+  group_by(week) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low),
+            close = last(close),
+            volume = sum(volume / 1000000),
+            adjusted = mean(adjusted)) |> 
+ggplot(aes(x = week)) +
+  geom_bar(aes(y = volume), stat = "identity", fill = "#377EB8", alpha = 0.5) +
+  geom_line(aes(y = 0.2*adjusted), stat = "identity", color = "#E41A1C", size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Price")) +
+  labs(
+    title = "CXW Stock Prices vs. Volume",
+    x = "",
+    y = "Volume (per million)"
+  )
+
+```
+
+```{r misc graphs, eval=FALSE}
+
+ggplot(ticker_stocks, aes(x = date, y = adjusted, color = symbol)) +
+  geom_line()
+
+ticker_stocks |> 
+  mutate(month = floor_date(date, "month")) |> 
+  group_by(symbol, month) |> 
+  summarise(open = first(open),
+            high = max(high),
+            low = min(low), 
+            close = last(close),
+            volume = sum(volume)) |> 
+  ungroup() |> 
+  ggplot(aes(x = month, y = volume, fill = symbol)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~symbol)
+
+ticker_stocks |> 
+  mutate(month = floor_date(date, "month")) |> 
+  group_by(symbol, month) |> 
+  summarise(total_volume = sum(volume),
+            avg_daily_volume = mean(volume)) |> 
+  ungroup() |> 
+  ggplot(aes(x = month, y = avg_daily_volume, fill = symbol)) +
+  geom_col(show.legend = FALSE) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~symbol, ncol = 5) +
+  theme_bw() +
+  theme(axis.text = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(
+    title = "Trading Volume for Selected Stocks",
+    x = "",
+    y = "Volume"
+  )
+```

@@ -1,0 +1,65 @@
+---
+title: "Task 18 - The US Grocer (KR)"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+```{r setup}
+library(tidyverse)
+library(dygraphs)
+library(tidyquant)
+library(readr)
+library(dplyr)
+```
+
+```{r KR performance over 5 years}
+
+kroger_stocks <- tq_get("KR", get = "stock.prices", from = "2019-07-01", to = "2024-07-01")
+
+kroger_stocks |> 
+  select(date, adjusted) |> 
+dygraph(main = "Kroger Stock Performance") |> 
+  dyAxis("y", label = "Adjusted Returns")
+```
+
+<br>
+
+```{r KR stock portfolio performance}
+
+initial_investment <- 10000
+
+kroger_stocks |> 
+  mutate(daily_return = close / first(close),
+         portfolio_value = initial_investment * daily_return,
+         cumulative_return = initial_investment * cumprod(daily_return)) |> 
+  select(date, portfolio_value) |> 
+  dygraph(main = "Kroger Stock Portfolio Performance") |> 
+    dyAxis("y", label = "Portfolio Value") |> 
+  dyRangeSelector()
+
+```
+
+<br>
+
+```{r KR stock portfolio rebased}
+
+initial_investment <- 10000
+
+kroger_stocks |> 
+  mutate(daily_return = close / first(close),
+         portfolio_value = initial_investment * daily_return) |> 
+  select(date, portfolio_value) |> 
+  dygraph(main = "Kroger Stock Portfolio Performance (Rebased)") |> 
+    dyAxis("y", label = "Portfolio Value") |> 
+  dyRebase(initial_investment) |> 
+  dyRangeSelector()
+
+```
