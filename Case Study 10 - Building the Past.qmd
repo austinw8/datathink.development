@@ -1,0 +1,193 @@
+---
+title: "Building the Past"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+Between 2007 and 2010, the United States faced one of the [most severe housing market collapses](https://en.wikipedia.org/wiki/Subprime_mortgage_crisis) in its history. The ripple effects of the mortgage crisis led to a dramatic downturn in residential construction activities, profoundly impacting single-family housing permits across the nation.
+
+## Across the U.S. 
+
+```{r setup, echo=FALSE, results='hide'}
+
+devtools::install_github("hathawayj/buildings")
+library(rnaturalearth)
+library(tidyverse)
+library(devtools)
+library(usethis)
+library(buildings)
+library(USAboundaries)
+library(stringr)
+library(sf)
+library(DT)
+library(ggrepel)
+
+```
+
+```{r data input and tidying, echo=FALSE, results='hide'}
+
+world_states <- ne_states()
+
+states <- maps::map("state", plot = FALSE, fill = TRUE) |>
+  st_as_sf() |> 
+  mutate(ID = str_to_title(ID)) |> 
+  rename(name = "ID")
+
+us_states <- world_states |> 
+  filter(geonunit == "United States of America", 
+         !woe_name %in% c("Alaska", "Hawaii"))
+
+permits_us <- buildings::permits |> 
+  rename(FIPS.state = state,
+         FIPS.county = county)
+
+permits_us_single_fam <- buildings::permits |> 
+  rename(FIPS.state = state,
+         FIPS.county = county) |> 
+  filter(variable == "Single Family")
+
+permits_id <- buildings::permits |> 
+  filter(StateAbbr == "ID") |> 
+  rename(FIPS.state = state,
+         FIPS.county = county)
+
+permits_id_single_fam <- buildings::permits |> 
+  filter(StateAbbr == "ID",
+         variable == "Single Family") |> 
+  rename(FIPS.state = state,
+         FIPS.county = county)
+
+us_county_data <- st_read("../data/spatial_idaho/shp/County-AK-HI-Moved-USA-Map.shp") |> 
+  select(StateFIPSN, CntyFIPSN, StateName, CntyName, geometry) |> 
+  rename(FIPS.county = "CntyFIPSN",
+         FIPS.state = "StateFIPSN")
+
+id_county_data <- us_county_data |> 
+  filter(StateName == "Idaho") |> 
+  st_transform(us_county_data, crs = "NAD27")
+
+merged_id_data <- permits_id_single_fam |> 
+  left_join(id_county_data, by = c("FIPS.county", "FIPS.state"))
+
+merged_us_data <- permits_us_single_fam |> 
+  left_join(us_county_data, by = c("FIPS.county", "FIPS.state"))
+
+```
+
+::: panel-tabset
+## Plot
+
+```{r permit decline plot}
+
+us_permit_values_adj <- merged_us_data |> 
+  mutate(StateName = str_to_title(StateName)) |> 
+  rename(name = "StateName") |> 
+  select(!StateAbbr, !CntyName) |> 
+  group_by(name, year, FIPS.state) |> 
+  summarise(total_value = sum(value, na.rm = TRUE)) |> 
+  filter(year %in% c("1980", "2010")) |> 
+  pivot_wider(names_from = year, values_from = total_value) |> 
+  mutate(`1980_adj` = (`1980` * 2.785),
+         amnt_change = ((`2010` - `1980_adj`) / `1980_adj`)) |> 
+  left_join(states, by = "name") |> 
+  na.omit() |> 
+  rename(geometry = "geom")
+
+ggplot() +
+  geom_sf(data = us_permit_values_adj, aes(geometry = geometry, fill = amnt_change)) +
+  scale_fill_gradient(low = "#FF2500", high = "#FFFC74", labels = scales::percent_format()) + 
+  theme_void() +
+  labs(
+    title = "Single Family Housing Permit Value Decline in US \nfrom 1980 to 2010",
+    subtitle = "Adjusted for inflation according to BLS",
+    fill = "Percent Change"
+  ) +
+  coord_sf(crs = "NAD27")
+
+```
+
+## Data
+
+```{r data}
+
+datatable(us_permit_values_adj)
+
+```
+:::
+
+As shown above, the value of single-family housing permits declined significantly in 2010 as compared to 1980, with states like California, Florida, Oregon, Rhode Island, and Connecticut seeing over an 80% decrease in permit values.
+
+## Looking at Idaho
+
+Idaho, like many other states, experienced a noticeable decrease in new home construction permit values. This drop reflects the broader economic troubles of the time, where obtaining loans became harder, and fewer new homes were being built.
+
+::: panel-tabset
+## Plot
+
+```{r ID permit decline plot}
+
+id_permit_values_adj <- merged_id_data |> 
+  mutate(StateName = str_to_title(StateName)) |> 
+  rename(name = "StateName") |> 
+  select(!StateAbbr, !CntyName) |> 
+  group_by(countyname, year, FIPS.state) |> 
+  summarise(total_value = sum(value, na.rm = TRUE)) |> 
+  filter(year %in% c("1980", "2010")) |> 
+  pivot_wider(names_from = year, values_from = total_value) |> 
+  mutate(`1980_adj` = (`1980` * 2.785),
+         percent_change = ((`2010` - `1980_adj`) / `1980_adj`)) |> 
+  rename(CntyName = "countyname") |> 
+  left_join(id_county_data, by = "CntyName") |> 
+  select(-FIPS.state.x, -FIPS.state.y, -StateName) |> 
+  mutate(percent_change = if_else(percent_change > 0, NA_real_, percent_change)) |> 
+  mutate(CntyName = str_sub(CntyName, 1, -8))
+
+ggplot() +
+  geom_sf(data = id_permit_values_adj, aes(geometry = geometry, fill = percent_change)) +
+  scale_fill_gradient(low = "#FF2500", high = "#FFFC74", na.value = "grey85", labels = scales::percent_format()) + 
+  theme_void() +
+  labs(
+    title = "Single Family Housing Permit Value Decline in Idaho \nfrom 1980 to 2010",
+    subtitle = "Adjusted for inflation according to BLS",
+    fill = "Percent Change"
+  ) +
+  coord_sf(crs = "NAD27")
+
+```
+
+## Labeled
+
+```{r labeled ID permit decline plot}
+
+ggplot() +
+  geom_sf(data = id_permit_values_adj, aes(geometry = geometry, fill = percent_change)) +
+  scale_fill_gradient(low = "#FF2500", high = "#FFFC74", na.value = "grey85", labels = scales::percent_format()) + 
+  theme_void() +
+  geom_label_repel(data = id_permit_values_adj, aes(geometry = geometry, label = CntyName), 
+                   size = 2, nudge_x = -0.01, nudge_y = 0.2, 
+                   stat = "sf_coordinates") +
+  labs(
+    title = "Single Family Housing Permit Value Decline in Idaho \nfrom 1980 to 2010",
+    subtitle = "Adjusted for inflation according to BLS",
+    fill = "Percent Change"
+  ) +
+  coord_sf(crs = "NAD27")
+
+```
+
+## Data
+
+```{r ID data}
+
+datatable(id_permit_values_adj)
+
+```
+:::
