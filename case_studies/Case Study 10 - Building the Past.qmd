@@ -14,7 +14,11 @@ execute:
 
 Between 2007 and 2010, the United States faced one of the [most severe housing market collapses](https://en.wikipedia.org/wiki/Subprime_mortgage_crisis) in its history. The ripple effects of the mortgage crisis led to a dramatic downturn in residential construction activities, profoundly impacting single-family housing permits across the nation.
 
-## Across the U.S. 
+In this report, we'll be focusing on single-family housing permits in1980 and in 2010.
+
+A nationwide decrease in single-family home permit values can be a signal for many things, including economic slowdown or recession, affordability issues, and a shifting market.
+
+## Across the U.S.
 
 ```{r setup, echo=FALSE, results='hide'}
 
@@ -191,3 +195,15 @@ datatable(id_permit_values_adj)
 
 ```
 :::
+
+## Additional Critical Factors
+
+Beyond permit values, other critical factors and indicators to consider when analyzing the mortgage crisis include (but aren't limited to):
+
+-   foreclosure rates
+
+-   loan prices over time
+
+-   housing supply
+
+-   credit conditions

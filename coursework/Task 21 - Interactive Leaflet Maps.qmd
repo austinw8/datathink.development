@@ -1,0 +1,215 @@
+---
+title: "Task 21: Interactive Leaflet Maps"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+```{r, warning=FALSE}
+library(leaflet)
+library(shiny)
+library(tidyverse)
+library(sf)
+library(maps)
+library(ggrepel)
+library(dplyr)
+```
+
+```{r, warning=FALSE}
+
+mymap = leaflet()
+mymap = addTiles(mymap)
+mymap
+
+mymap = leaflet() |> 
+  addProviderTiles(mymap, provider = "CartoDB.Positron")
+mymap
+```
+
+```{r Base Map Choices}
+
+shinyServer(function(input, output) {
+  output$mymap <- renderLeaflet({
+    input$update   # catching the action button event
+    isolate(leaflet() %>%
+              addProviderTiles(input$bmap))
+  })
+})
+
+shinyUI(bootstrapPage(
+  leafletOutput("mymap"),
+  absolutePanel(top = 25, right = 20, width = 150, draggable = TRUE,
+                selectInput("bmap", "Base map tile provider", 
+                            choices = c("Stamen.Toner","CartoDB.Positron", "Esri.WorldImagery", "MapQuestOpen.OSM", "Stamen.Watercolor"), 
+                            selected = "CartoDB.Positron"),
+                actionButton("update", "Update Map!"))
+))
+```
+
+```{r}
+
+mymap = leaflet() |> 
+  addProviderTiles(mymap, provider = "Esri.WorldImagery") |> 
+  setView(mymap, lng = 78.0419, lat = 27.1750, zoom = 16) |> 
+  addMarkers(lng = 78.0419, lat = 27.1750, popup = "Taj Mahaj, Agra, India")
+
+mymap
+
+```
+
+```{r}
+
+shinyUI(bootstrapPage(
+  h5("Integrating leaflet with Shiny - mapping Taj Mahaj"),
+  leafletOutput("mymap", height = "600")
+))
+
+map_output$mymap <- renderLeaflet({
+  leaflet() |> 
+  addProviderTiles(mymap, provider = "Esri.WorldImagery") |> 
+  setView(mymap, lng = 78.0419, lat = 27.1750, zoom = 16) |> 
+  addMarkers(lng = 78.0419, lat = 27.1750, popup = "Taj Mahaj, Agra, India")
+})
+
+leafletOutput()
+
+server.r
+renderLeaflet()
+
+```
+
+```{r}
+
+m = leaflet() |> 
+  addTiles() |> 
+  setView(-93.65, 42.0285, zoom = 17) |> 
+  addPopups(-93.65, 42.0285, "Department of Statistics, ISU")
+m
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+states <- maps::map("state", plot = FALSE, fill = TRUE) |>
+  st_as_sf() |> 
+  mutate(ID = str_to_title(ID)) |> 
+  rename(name = "ID")
+
+county_data <- st_read("../data/spatial_idaho/shp/County-AK-HI-Moved-USA-Map.shp")
+idaho_data <- county_data |> 
+  filter(StateName == "Idaho")
+
+top_1_city <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000) |> 
+  mutate(name = str_sub(name, 1, -4))
+
+top_2_city <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 2) |> 
+  slice_min(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000)
+
+
+top_3_city <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 3) |> 
+  slice_min(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000)
+
+
+ggplot() +
+  geom_sf(data = states, fill = NA) +
+  geom_sf(data = idaho_data, fill = NA) +
+  geom_sf(data = top_3_city, aes(geometry = geometry, size = pop_per_mil), color = "lightblue") +
+  geom_sf(data = top_2_city, aes(geometry = geometry, size = pop_per_mil), color = "blue") +
+  geom_sf(data = top_1_city, aes(geometry = geometry, size = pop_per_mil), color = "darkblue") +
+  geom_label_repel(data = top_1_city, aes(geometry = geometry, label = name), 
+                   size = 2, nudge_x = 0.5, nudge_y = -0.75, 
+                   stat = "sf_coordinates") +
+  labs(
+    title = "Most Populated U.S. Cities",
+    x = "",
+    y = "", 
+    size = "Population \n(1,000)"
+  )
+```
+
+```{r interactive map data prep}
+
+top_1_city_latlong <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000) |> 
+  mutate(name = str_sub(name, 1, -4)) |> 
+  mutate(lng = sf::st_coordinates(geometry)[,2],
+         lat = sf::st_coordinates(geometry)[,1])
+
+top_2_city_latlong <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 2) |> 
+  slice_min(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000) |> 
+    mutate(lng = sf::st_coordinates(geometry)[,2],
+         lat = sf::st_coordinates(geometry)[,1])
+
+
+top_3_city_latlong <- us.cities |> 
+  group_by(country.etc) |> 
+  slice_max(order_by = pop, n = 3) |> 
+  slice_min(order_by = pop, n = 1) |> 
+  ungroup() |> 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD83") |> 
+  filter(country.etc != c("AK", "HI")) |> 
+  mutate(pop_per_mil = pop / 1000) |> 
+    mutate(lng = sf::st_coordinates(geometry)[,2],
+         lat = sf::st_coordinates(geometry)[,1])
+```
+
+```{r}
+
+states_sf <- st_as_sf(states)
+idaho_data_sf <- st_as_sf(idaho_data)
+
+states_wgs84 <- st_transform(states_sf, crs = 4326)
+idaho_data_wgs84 <- st_transform(idaho_data_sf, crs = 4326)
+
+interactive_map <- leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(data = states, fill = NA, color = "black", weight = 0.5) %>% 
+  addPolygons(data = idaho_data_wgs84, fill = NA, color = "black", weight = 0.5) |> 
+  addCircleMarkers(data = top_3_city, color = "green", radius = ~sqrt(pop_per_mil) / 5) |>
+  addCircleMarkers(data = top_2_city, color = "purple", radius = ~sqrt(pop_per_mil) / 5) |> 
+  addCircleMarkers(data = top_1_city, color = "darkblue", radius = ~sqrt(pop_per_mil) / 5) |> 
+  addMarkers(data = top_1_city_latlong, lng = ~lat, lat = ~lng, popup = ~name)
+
+interactive_map
+```
+
+```{r}
+
+quakes1 = quakes[sample(nrow(quakes), 10), ]
+
+leaflet(data = quakes1) |> 
+  addProviderTiles("Esri.WorldImagery") |> 
+  addMarkers(lng = ~long, lat = ~lat) |> 
+  addCircleMarkers(lng = ~long, lat = ~lat)
+
+
+```

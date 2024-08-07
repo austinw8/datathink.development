@@ -32,7 +32,6 @@ view(table2.0)
   #a. One variable might be spread across multiple columns.
   #b. One observation might be scattered across multiple rows.
 
-
 # Tidying Tables 4a and 4b: Longer -----------------------------------------
 
 tidy4a <- 

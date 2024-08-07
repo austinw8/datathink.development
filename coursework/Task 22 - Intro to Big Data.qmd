@@ -1,0 +1,29 @@
+---
+title: "Task 22: Intro to Big Data"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+## Hadoop
+
+Infastructure software for storing large datasets\
+Batch processing environment\
+Not good for adhoc quiries
+
+**HDFS** (Hadoop Distributed File System) - cluster system\
+allows you to store files larger (or more files) than what your PC can handle
+
+**MapReduce** - processes data on nodes\
+moves processing software to data, not other way around like normal
+
+## Apache Spark
+
+SparkSQL, Streaming, MCLib, MLLib, GraphX, SparkR, all supported by **Spark Core**
+
+**RDD** - Resilient Distributed Dataset
+
+Advantage? Very *speedy*! \
+Disadvantage? Extreme amount of RAM needed
+
+\

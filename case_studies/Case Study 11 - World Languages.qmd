@@ -1,0 +1,270 @@
+---
+title: "World Languages"
+author: "Austin Mangelson"
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+> "*Every 14 days a language dies. By 2100, more than half of the more than 7,000 languages spoken on Earth—many of them not yet recorded—may disappear, taking with them a wealth of knowledge about history, culture, the natural environment, and the human brain*"
+>
+> -   [National Geographic's Enduring Voices Project](#0)
+
+## Why is Language Important?
+
+Language is an extension of human expression and cultural identity. Each language carries its own unique history, worldview, and set of traditions, providing insights into the ways different communities understand and interact with the world. It is through language that people express their thoughts, share their stories, and build relationships across cultures.
+
+Studying languages is important for fostering mutual understanding. Understanding languages enhances our ability to appreciate different perspectives. When we speak or even just appreciate another language, we show respect for the culture it represents, which can break down barriers and build trust.
+
+## About the Data
+
+[Glottolog](http://glottolog.org/) provides a comprehensive catalogue of the world's languoids (*languages, families, and dialects*).
+
+Click on each dot for more details on each language. Learn more about each language, including its family, dialects, classification and more at [glottolog.org/glottolog/language](https://glottolog.org/glottolog/language).
+
+```{r package import, echo=FALSE, results='hide'}
+
+library(readr)
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+```
+
+```{r data import, echo=FALSE, results='hide'}
+
+languages <- read_csv("../data/world_languages/languages-and-dialects-geo.csv") |> 
+  select(name, macroarea)
+
+languoid <- read_csv("../data/world_languages/languoid.csv") |> 
+  select(name, level, latitude, longitude, status)
+
+comb_lang <- languoid |> 
+  left_join(languages, by = "name")
+```
+
+```{r interactive world language map, warning=FALSE, message=FALSE}
+
+safe_lang <- comb_lang |> 
+  filter(status %in% "safe") |> 
+  na.omit()
+
+vulnerable_lang <- comb_lang |> 
+  filter(status %in% "vulnerable") |> 
+  na.omit()
+
+defend_lang <- comb_lang |> 
+  filter(status %in% "definitely endangered") |> 
+  na.omit()
+
+sevend_lang <- comb_lang |> 
+  filter(status %in% "severely endangered") |> 
+  na.omit()
+
+critend_lang <- comb_lang |> 
+  filter(status %in% "critically endangered") |> 
+  na.omit()
+
+extinct_lang <- comb_lang |> 
+  filter(status %in% "extinct") |> 
+  na.omit()
+
+lang_map_world <- leaflet() |> 
+  addTiles(options = providerTileOptions(noWrap = TRUE)) |> 
+  
+  addCircleMarkers(
+    data = safe_lang, 
+    color = "green", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", safe_lang$name, "<br>",
+                  "<b>Status:</b>", safe_lang$status, "<br>",
+                  "<b>Level:</b>", safe_lang$level, "<br>",
+                  "<b>Macroarea:</b>", safe_lang$macroarea, "<br>"),
+    group = "safe"
+  ) |> 
+  
+  addCircleMarkers(
+    data = vulnerable_lang, 
+    color = "grey", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", vulnerable_lang$name, "<br>",
+                  "<b>Status:</b>", vulnerable_lang$status, "<br>",
+                  "<b>Level:</b>", vulnerable_lang$level, "<br>",
+                  "<b>Macroarea:</b>", vulnerable_lang$macroarea, "<br>"),    
+    group = "vulnerable"
+  ) |> 
+  
+  addCircleMarkers(
+    data = defend_lang, 
+    color = "yellow", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", defend_lang$name, "<br>",
+                  "<b>Status:</b>", defend_lang$status, "<br>",
+                  "<b>Level:</b>", defend_lang$level, "<br>",
+                  "<b>Macroarea:</b>", defend_lang$macroarea, "<br>"), 
+    group = "definitely endangered"
+  ) |> 
+  
+  addCircleMarkers(
+    data = sevend_lang, 
+    color = "orange", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", sevend_lang$name, "<br>",
+                  "<b>Status:</b>", sevend_lang$status, "<br>",
+                  "<b>Level:</b>", sevend_lang$level, "<br>",
+                  "<b>Macroarea:</b>", sevend_lang$macroarea, "<br>"),
+    group = "severely endangered"
+  ) |> 
+  
+  addCircleMarkers(
+    data = critend_lang, 
+    color = "red", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", critend_lang$name, "<br>",
+                  "<b>Status:</b>", critend_lang$status, "<br>",
+                  "<b>Level:</b>", critend_lang$level, "<br>",
+                  "<b>Macroarea:</b>", critend_lang$macroarea, "<br>"),
+    group = "critically endangered"
+  ) |> 
+  
+  addCircleMarkers(
+    data = extinct_lang, 
+    color = "black", 
+    radius = 3,
+    popup = paste("<b>Name:</b>", extinct_lang$name, "<br>",
+                  "<b>Status:</b>", extinct_lang$status, "<br>",
+                  "<b>Level:</b>", extinct_lang$level, "<br>",
+                  "<b>Macroarea:</b>", extinct_lang$macroarea, "<br>"),
+    group = "extinct"
+  ) |> 
+  
+  addLayersControl(
+    overlayGroups = c("safe", "vulnerable", "definitely endangered", "severely endangered", "critically endangered", "extinct"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+
+lang_map_world
+
+```
+
+## UNESCO Endangered Languages Classification
+
+The [UNESCO list](https://guides.lib.uconn.edu/c.php?g=1232158&p=9415488) has 6 categories of endangerment:
+
+-   **Safe / Not Endangered**: Is spoken by all generations and inter-generational transmission is uninterrupted.
+
+-   **Vulnerable:** Most children speak the language, but it may be restricted to certain domains (*e.g. home*)
+
+-   **Definitely endangered**: Children no longer learn the language as a mother tongue in the home.
+
+-   **Severely endangered**: The language is spoken by grandparents and older generations. While the parent generation may understand it, they do not speak it to children or among themselves.
+
+-   **Critically endangered**: The youngest speakers are grandparents and older, and they speak the language partially and infrequently.
+
+-   **Extinct**: there are no speakers left (*Note: The Atlas presumes extinction if there have been no known speakers since the 1950s*.)
+
+```{r clustered map, eval=FALSE}
+lang_map_world2 <- leaflet() |> 
+  addTiles(options = providerTileOptions(noWrap = TRUE)) |> 
+  
+  addCircleMarkers(
+    data = safe_lang, 
+    color = "green", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "safe"
+  ) |> 
+  
+   addCircleMarkers(
+    data = vulnerable_lang, 
+    color = "yellow", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "vulnerable"
+  ) |> 
+  
+   addCircleMarkers(
+    data = defend_lang, 
+    color = "orange", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "definitely endangered"
+  ) |> 
+  
+   addCircleMarkers(
+    data = sevend_lang, 
+    color = "red", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "severely endangered"
+  ) |> 
+  
+   addCircleMarkers(
+    data = critend_lang, 
+    color = "grey", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "critically endangered"
+  ) |> 
+  
+   addCircleMarkers(
+    data = extinct_lang, 
+    color = "black", 
+    radius = 3,
+    popup = ~name,
+    labelOptions = labelOptions(noHide = FALSE, direction = "auto", opacity = 0.75),
+    clusterOptions = markerClusterOptions(),
+    group = "extinct"
+  ) |> 
+  
+  addLayersControl(
+    overlayGroups = c("safe", "vulnerable", "definitely endangered", "severely endangered", "critically endangered", "extinct"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+lang_map_world2
+```
+
+```{r UK languages, eval=FALSE}
+
+lang_uk <- comb_lang |> 
+  filter(longitude > -11, longitude < 2, latitude < 60, latitude > 50)
+
+safe_lang_uk <- lang_uk |> 
+  filter(status %in% "safe")
+
+vulnerable_lang_uk <- lang_uk |> 
+  filter(status %in% "vulnerable")
+
+def_end_lang_uk <- lang_uk |> 
+  filter(status %in% "definitely endangered")
+
+extinct_lang_uk <- lang_uk |> 
+  filter(status %in% "extinct")
+
+
+lang_map_uk <- leaflet() |> 
+  addTiles() |> 
+  addCircleMarkers(data = safe_lang_uk, color = "green", radius = 5) |> 
+  addCircleMarkers(data = vulnerable_lang_uk, color = "yellow", radius = 5) |> 
+  addCircleMarkers(data = def_end_lang_uk, color = "orange", radius = 5) |>
+  addCircleMarkers(data = extinct_lang_uk, color = "red", radius = 5)
+  
+language_map_uk
+```
