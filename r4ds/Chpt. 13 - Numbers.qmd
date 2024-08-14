@@ -1,0 +1,478 @@
+---
+title: "Chpt. 13 - Numbers"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+```
+
+## Making Numbers
+
+"parse" strings into numbers
+
+```{r}
+x <- c("1.2", "5.6", "1e3")
+parse_double(x)
+
+```
+
+```{r}
+x <- c("$1,234", "USD 3,513", "59%")
+parse_number(x)
+```
+
+## Counts
+
+```{r}
+flights |> 
+  count(dest)
+
+#to see most common values (largest groups)
+flights |> 
+  count(dest, sort = TRUE)
+```
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  summarise(
+    n = n(), 
+    delay = mean(arr_delay, na.rm = TRUE)
+  )
+```
+
+n_distinct()
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  summarise(carriers = n_distinct(carrier)) |> 
+  arrange(desc(carriers))
+```
+
+```{r}
+flights |> 
+  group_by(tailnum) |> 
+  summarise(miles = sum(distance))
+
+#weighted counts
+flights |> 
+  count(tailnum, wt = distance)
+
+flights |> 
+  count(tailnum)
+```
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  summarise(n_cancelled = sum(is.na(dep_time)))
+```
+
+### Exercises
+
+1.  How can you use [`count()`](https://dplyr.tidyverse.org/reference/count.html) to count the number of rows with a missing value for a given variable?
+
+```{r}
+flights |> 
+  count(is.na(dep_delay))
+```
+
+2.  Expand the following calls to [`count()`](https://dplyr.tidyverse.org/reference/count.html) to instead use [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html), [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html), and [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html):
+
+<!-- -->
+
+1.  `flights |> count(dest, sort = TRUE)`
+
+2.  `flights |> count(tailnum, wt = distance)`
+
+```{r}
+flights |> 
+  count(dest, sort = TRUE)
+
+flights |> 
+  group_by(dest) |> 
+  summarise(
+    n = n()
+  ) |> 
+  arrange(desc(n))
+```
+
+```{r}
+flights |> 
+  count(tailnum, wt = distance)
+
+flights |> 
+  group_by(tailnum) |> 
+  summarise(
+    n = sum(distance)
+  )
+```
+
+## Numeric Transformations
+
+R recycles, or repeats, the short vector
+
+```{r}
+x <- c(1, 2, 10, 20)
+x / 5
+```
+
+```{r}
+x * c(1, 2)
+x * c(1, 2, 3)
+```
+
+```{r}
+flights |> 
+  filter(month == c(1, 2))
+```
+
+Max / Min\
+pmin() and pmax()
+
+```{r}
+df <- tribble(
+  ~x, ~y,
+  1, 3,
+  5, 2,
+  7, NA,
+)
+
+df |> 
+  mutate(
+    min = pmin(x, y, na.rm = TRUE),
+    max = pmax(x, y, na.rm = TRUE)
+  )
+```
+
+In R, %/% does integer division, %% computes remainder
+
+```{r}
+1:10 %/% 3 #integer division
+
+1:10 %% 3 #remainder
+```
+
+```{r}
+flights |> 
+  mutate(
+    hour = sched_dep_time %/% 100,
+    minute = sched_dep_time %% 100,
+    .keep = "used"
+  )
+```
+
+```{r}
+flights |> 
+  group_by(hour = sched_dep_time %/% 100) |> 
+  summarise(prop_cancelled = mean(is.na(dep_time)), n = n()) |> 
+  filter(hour > 1) |> 
+  ggplot(aes(x = hour, y = prop_cancelled)) +
+  geom_line(color = "grey50") +
+  geom_point(aes(size = n)) +
+  theme_bw() +
+  labs(
+    x = "Scheduled departure hour",
+    y = "proportion of cancelled flights"
+  )
+```
+
+```{r}
+round(123.456)
+
+round(123.456, 2) #two digits
+round(123.456, 1) #one digit
+round(123.456, -1) #nearest ten
+round(123.456, -2) #nearest hundred
+```
+
+```{r}
+round(c(1.5, 2.5))
+#Banker's rounding - when half way between 2 integers, rounds to nearest even integer
+
+x <- 123.456
+floor(x)
+ceiling(x)
+
+#round down to nearest 2 digits
+floor(x / 0.01) * 0.01
+
+#round up to nearest 2 digits
+ceiling(x / 0.01) * 0.01
+
+#round to nearest multiple of 4
+round(x / 4) * 4
+
+#round to nearest 0.25
+round(x / 0.25) * 0.25
+```
+
+#### Cutting numbers into ranges
+
+```{r}
+x <- c(1, 2, 5, 10, 15, 20)
+cut(x, breaks = c(0, 5, 10, 15, 20))
+cut(x, breaks = c(0, 5, 10, 100))
+
+
+cut(x,
+    breaks = c(0, 5, 10, 15, 20),
+    labels = c("sm", "md", "lg", "xl"))
+```
+
+```{r}
+x <- 1:10
+cumsum(x)
+```
+
+### Exercises
+
+1.  Explain in words what each line of the code used to generate [Figure 13.1](https://r4ds.hadley.nz/numbers#fig-prop-cancelled) does.
+
+```{r}
+flights |> 
+  group_by(hour = sched_dep_time %/% 100) |> 
+  summarize(prop_cancelled = mean(is.na(dep_time)), n = n()) |> 
+  filter(hour > 1) |> 
+  ggplot(aes(x = hour, y = prop_cancelled)) +
+  geom_line(color = "grey50") + 
+  geom_point(aes(size = n))
+```
+
+group_by(hour = sched_dep_time %/% 100)\
+groups data by the hour of scheduled departure time (extracting hour portion of the time)
+
+summarize(prop_cancelled = mean(is.na(dep_time)), n = n())\
+summarizes grouped data by calculating the proportion of canceled flights for each hour\
+
+2.  What trigonometric functions does R provide? Guess some names and look up the documentation. Do they use degrees or radians?
+
+sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), sinh(x), cosh(x), tanh(x), etc. All trig functions in R use radians, not degrees.
+
+3.  Currently `dep_time` and `sched_dep_time` are convenient to look at, but hard to compute with because they’re not really continuous numbers. You can see the basic problem by running the code below: there’s a gap between each hour.
+
+```{r}
+flights |> 
+  filter(month == 1, day == 1)
+
+flights |> 
+  filter(month == 1, day == 1) |> 
+  ggplot(aes(x = sched_dep_time, y = dep_delay)) +
+  geom_point()
+```
+
+Convert them to a more truthful representation of time (either fractional hours or minutes since midnight).
+
+```{r}
+????
+```
+
+4.  Round `dep_time` and `arr_time` to the nearest five minutes.
+
+```{r}
+flights |> 
+  mutate(
+    dep_time = round(dep_time / 5) * 5
+  )
+```
+
+## General Transformations
+
+```{r}
+x <- c(1, 2, 2, 3, 4, NA)
+min_rank(x)
+min_rank(desc(x))
+```
+
+```{r}
+df <- tibble(x = x)
+df |> 
+  mutate(row_number = row_number(x),
+         dense_rank = dense_rank(x),
+         perfent_rank = percent_rank(x),
+         cume_dist = cume_dist(x))
+```
+
+```{r}
+df <- tibble(id = 1:10)
+
+df |> 
+  mutate(
+    row0 = row_number() - 1,
+    three_groups = row0 %% 3,
+    three_in_each_group = row0 %/% 3
+  )
+```
+
+Offsets
+
+```{r}
+x <- c(2, 5, 11, 19, 35)
+lag(x)
+lead(x)
+
+#difference between current and previous value
+x - lag(x)
+
+##current value changes
+x == lag(x)
+```
+
+Consecutive identifiers
+
+```{r}
+events <- tibble(
+  time = c(0, 1, 2, 3, 5, 10, 12, 15, 17, 19, 20, 27, 28, 30)
+)
+
+events <- events |> 
+  mutate(
+    diff = time - lag(time, default = first(time)),
+    has_gap = diff >= 5
+  )
+
+events |> 
+  mutate(
+    group = cumsum(has_gap)
+  )
+```
+
+### Exercises
+
+1.  Find the 10 most delayed flights using a ranking function. How do you want to handle ties? Carefully read the documentation for [`min_rank()`](https://dplyr.tidyverse.org/reference/row_number.html).
+
+```{r}
+flights |> 
+  mutate(rank = min_rank(desc(dep_delay))) |>
+  filter(rank <= 10) |> 
+  arrange(rank) |> 
+  select(flight, dep_delay, rank)
+
+flights |> 
+  mutate(rank = min_rank(dep_delay)) |>
+  filter(rank <= 10) |> 
+  arrange(rank) |> 
+  select(flight, dep_delay, rank)
+```
+
+2.  Which plane (`tailnum`) has the worst on-time record?
+
+```{r}
+flights |> 
+  group_by(tailnum) |> 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+            n_flights = n()) |> 
+  filter(n_flights > 20) |> 
+  arrange(desc(avg_arr_delay))
+```
+
+3.  What time of day should you fly if you want to avoid delays as much as possible?
+
+```{r}
+
+```
+
+4.  What does `flights |> group_by(dest) |> filter(row_number() < 4)` do? What does `flights |> group_by(dest) |> filter(row_number(dep_delay) < 4)` do?
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  filter(row_number() < 4)
+
+flights |> 
+  group_by(dest) |> 
+  filter(row_number(dep_delay) < 4)
+```
+
+5.  For each destination, compute the total minutes of delay. For each flight, compute the proportion of the total delay for its destination.
+
+```{r}
+
+```
+
+6.  Delays are typically temporally correlated: even once the problem that caused the initial delay has been resolved, later flights are delayed to allow earlier flights to leave. Using [`lag()`](https://dplyr.tidyverse.org/reference/lead-lag.html), explore how the average flight delay for an hour is related to the average delay for the previous hour.
+
+```{r}
+flights |> 
+  mutate(hour = dep_time %/% 100) |> 
+  group_by(year, month, day, hour) |> 
+  summarize(
+    dep_delay = mean(dep_delay, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) |> 
+  filter(n > 5)
+```
+
+7.  Look at each destination. Can you find flights that are suspiciously fast (i.e. flights that represent a potential data entry error)? Compute the air time of a flight relative to the shortest flight to that destination. Which flights were most delayed in the air?
+
+```{r}
+
+```
+
+8.  Find all destinations that are flown by at least two carriers. Use those destinations to come up with a relative ranking of the carriers based on their performance for the same destination.
+
+```{r}
+
+```
+
+## Numeric Summaries
+
+use mean for symmetric distributions, median for skewed distributions
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    mean = mean(dep_delay, na.rm = TRUE),
+    median = median(dep_delay, na.rm = TRUE),
+    n = n(),
+    .group = "drop"
+  ) |> 
+  ggplot(aes(x = mean, y = median)) +
+  geom_abline(slope = 1, intercept = 0, color = "white", linewidth = 2) +
+  geom_point()
+```
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    max = max(dep_delay, na.rm = TRUE),
+    q95 = quantile(dep_delay, 0.95, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+flights |> 
+  group_by(origin, dest) |> 
+  summarise(
+    distance_iqr = IQR(distance),
+    n = n(),
+    .groups = "drop"
+  ) |> 
+  filter(distance_iqr > 0)
+```
+
+```{r}
+flights |> 
+  filter(dep_delay < 120) |> 
+  ggplot(aes(x = dep_delay, group = interaction(day, month))) +
+  geom_freqpoly(binwidth = 5, alpha = 1/5)
+```
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(
+    first_dep = first(dep_time, na_rm = TRUE),
+    fifth_dep = nth(dep_time, 5, na_rm = TRUE),
+    last_dep = last(dep_time, na_rm = TRUE)
+  )
+```

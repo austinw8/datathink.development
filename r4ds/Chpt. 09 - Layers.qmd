@@ -1,0 +1,622 @@
+---
+title: "Chpt. 9 - Layers"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+### Aesthetic Mapping
+
+```{r}
+mpg
+
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point()
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, size = class)) +
+  geom_point()
+
+ggplot(mpg, aes(x = displ, y = hwy, alpha = class)) +
+  geom_point()
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(color = "blue")
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(shape = 8)
+```
+
+### Exercises
+
+1.  Create a scatterplot of `hwy` vs. `displ` where the points are pink filled in triangles.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(shape = "triangle", color = "pink") +
+  theme_bw()
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(shape = 17, color = "pink") +
+  theme_bw()
+```
+
+2.  Why did the following code not result in a plot with blue points?
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, color = "blue"))
+```
+
+Because the color argument is inside the aesthetics mapping. To create a plot with blue points, it must be outside.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy), color = "blue")
+```
+
+3.  What does the `stroke` aesthetic do? What shapes does it work with? (Hint: use [`?geom_point`](https://ggplot2.tidyverse.org/reference/geom_point.html))
+
+Stroke increases the size of the shape. It works with all shapes.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, stroke = 2), shape = 0, color = "blue")
+```
+
+4.  What happens if you map an aesthetic to something other than a variable name, like `aes(color = displ < 5)`? Note, you’ll also need to specify x and y.
+
+This creates aesthetics that map the conditions given.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, color = displ < 5))
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, size = hwy < 25))
+```
+
+### Geometric Objects
+
+All geom() functions take a mapping argument, but not every aesthetic works with every geom (ex. shaping points vs lines, line types, etc.)
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, shape = drv)) +
+  geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy, linetype = drv)) +
+  geom_smooth()
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(group = drv))
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv), show.legend = FALSE)
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_point(
+    data = mpg |> filter(class == "2seater"),
+    color = "red"
+  ) +
+  geom_point(
+    data = mpg |> filter(class == "2seater"),
+    shape = "circle open", size = 3, color = "red"
+  )
+```
+
+### Exercises
+
+1.  What geom would you use to draw a line chart? A boxplot? A histogram? An area chart?
+
+geom_line(), geom_boxplot(), geom_histogram(), geom_area() respectively
+
+2.  Earlier in this chapter we used `show.legend` without explaining it:
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv))
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv), show.legend = FALSE)
+```
+
+What does `show.legend = FALSE` do here? What happens if you remove it? Why do you think we used it earlier?
+
+It either shows or removes the legend.
+
+3.  What does the `se` argument to [`geom_smooth()`](https://ggplot2.tidyverse.org/reference/geom_smooth.html) do?
+
+It removes the or displays the confidence interval of the line.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(se = FALSE)
+```
+
+4.  Recreate the R code necessary to generate the following graphs. Note that wherever a categorical variable is used in the plot, it’s `drv`.
+
+```{r}
+
+#1
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(color = "blue", se = FALSE)
+
+#2
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(aes(group = drv), color = "blue", se = FALSE)
+
+#3
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth(aes(color = drv), se = FALSE)
+
+#4
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth(color = "blue", se = FALSE)
+
+#5
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth(aes(linetype = drv), color = "blue", se = FALSE)
+
+#6
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_point(
+    shape = "circle open", size = 3, stroke = 1.5, color = "white")
+```
+
+### Facets
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~cyl)
+```
+
+facet_grid() allows you to facet on 2 variables
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(drv ~ cyl)
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(drv ~ cyl, scales = "free")
+```
+
+### Exercises
+
+1.  What happens if you facet on a continuous variable?
+
+You get an error.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~wt)
+```
+
+2.  What do the empty cells in the plot above with `facet_grid(drv ~ cyl)` mean? Run the following code. How do they relate to the resulting plot?
+
+It means there's no data that fits both of the categorical criteria. The missing points in the second plot correspond to the missing plots in the faceted grid.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(drv ~ cyl, scales = "free")
+
+ggplot(mpg) + 
+  geom_point(aes(x = drv, y = cyl))
+```
+
+3.  What plots does the following code make? What does `.` do?
+
+The . indicates whether the faceting should be done in columns or rows.
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(. ~ cyl)
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(~cyl)
+```
+
+4.  Take the first faceted plot in this section. What are the advantages to using faceting instead of the color aesthetic? What are the disadvantages? How might the balance change if you had a larger dataset?
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) + 
+  facet_wrap(~ cyl, nrow = 2)
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, color = cyl))
+```
+
+Faceting is useful in larger data sets in order to more easily visualize distributions. It's also more useful to view small numbers of categorical numeric values.
+
+5.  Read [`?facet_wrap`](https://ggplot2.tidyverse.org/reference/facet_wrap.html). What does `nrow` do? What does `ncol` do? What other options control the layout of the individual panels? Why doesn’t [`facet_grid()`](https://ggplot2.tidyverse.org/reference/facet_grid.html) have `nrow` and `ncol` arguments?
+
+```{r}
+?facet_wrap
+```
+
+6.  Which of the following plots makes it easier to compare engine size (`displ`) across cars with different drive trains? What does this say about when to place a faceting variable across rows or columns?
+
+The rows make it significantly easier.
+
+```{r}
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() + 
+  facet_grid(drv ~ .)
+
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() +
+  facet_grid(. ~ drv)
+```
+
+7.  Recreate the following plot using [`facet_wrap()`](https://ggplot2.tidyverse.org/reference/facet_wrap.html) instead of [`facet_grid()`](https://ggplot2.tidyverse.org/reference/facet_grid.html). How do the positions of the facet labels change?
+
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_wrap(~ drv, ncol = 1)
+```
+
+### **Statistical Transformations**
+
+```{r}
+ggplot(diamonds, aes(x = cut)) +
+  geom_bar()
+
+diamonds |> 
+  count(cut) |> 
+  ggplot(aes(x = cut, y = n)) +
+  geom_bar(stat = "identity")
+
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) +
+  geom_bar()
+
+ggplot(diamonds) +
+  stat_summary(
+    aes(x = cut, y = depth),
+    fun.min = min, 
+    fun.max = max,
+    fun = median
+  )
+
+?geom_bar()
+```
+
+### Exercises
+
+1.  What is the default geom associated with [`stat_summary()`](https://ggplot2.tidyverse.org/reference/stat_summary.html)? How could you rewrite the previous plot to use that geom function instead of the stat function?
+
+The default geom is geom_pointrange().
+
+```{r}
+?stat_summary()
+?geom_pointrange()
+
+ggplot(diamonds) +
+  stat_summary(
+    aes(x = cut, y = depth),
+    fun.min = min, 
+    fun.max = max,
+    fun = median
+  )
+```
+
+2.  What does [`geom_col()`](https://ggplot2.tidyverse.org/reference/geom_bar.html) do? How is it different from [`geom_bar()`](https://ggplot2.tidyverse.org/reference/geom_bar.html)?
+
+geom_bar() represents the count (frequency) of cases in each specified category. It's default is stat = count.
+
+geom_col() bars represent values in the data. It does not by default perform any statistical transformation on the data.
+
+```{r}
+ggplot(diamonds, aes(x = cut)) +
+  geom_bar()
+
+ggplot(diamonds, aes(x = cut)) +
+  geom_col()
+```
+
+3.  Most geoms and stats come in pairs that are almost always used in concert. Make a list of all the pairs. What do they have in common? (Hint: Read through the documentation.)
+
+| **Geom** | **Stat** | **Common Use Case** | **What They Have in Common** |
+|----------|----------|---------------------|------------------------------|
+
+|              |                |                                                                |                                                                                                                 |
+|---------------|---------------|---------------|----------------------------|
+| `geom_bar()` | `stat_count()` | Creating bar plots to show the count of cases in each category | Both are used to count the number of occurrences in each category. `geom_bar()` uses `stat_count()` by default. |
+
+|              |                   |                                                                                |                                                                                  |
+|----------------|----------------|--------------------|---------------------|
+| `geom_col()` | `stat_identity()` | Creating bar plots where the height of the bars represents a value in the data | Both directly use the values provided in the dataset without any transformation. |
+
+|                    |              |                                                                       |                                                                                                       |
+|----------------|----------------|----------------|-------------------------|
+| `geom_histogram()` | `stat_bin()` | Creating histograms to show the distribution of a continuous variable | Both are used to bin continuous data into intervals and count the number of observations in each bin. |
+
+|                  |                  |                                                                               |                                                                                                    |
+|----------------|----------------|------------------|-----------------------|
+| `geom_density()` | `stat_density()` | Creating density plots to show the estimated density of a continuous variable | Both are used to estimate and visualize the probability density function of a continuous variable. |
+
+|                 |                 |                                                                      |                                                                                               |
+|----------------|----------------|-----------------|------------------------|
+| `geom_smooth()` | `stat_smooth()` | Adding smoothed lines (e.g., linear models, loess) to a scatter plot | Both are used to fit and plot a smoothed line to data, often to show a trend or relationship. |
+
+|                  |                  |                                                                               |                                                                                                                            |
+|---------------|---------------|---------------|---------------------------|
+| `geom_boxplot()` | `stat_boxplot()` | Creating boxplots to show the distribution of a continuous variable by groups | Both are used to summarize and visualize the distribution of a continuous variable using quartiles and potential outliers. |
+
+|                 |                   |                                                                                   |                                                                                                                                                    |
+|---------------|---------------|---------------|----------------------------|
+| `geom_violin()` | `stat_ydensity()` | Creating violin plots to show the distribution of a continuous variable by groups | Both are used to visualize the density of a continuous variable across different categories, similar to a combination of boxplot and density plot. |
+
+|                     |                  |                                                                                  |                                                                                                                             |
+|---------------|---------------|---------------|---------------------------|
+| `geom_pointrange()` | `stat_summary()` | Creating plots to summarize data, typically using means and confidence intervals | Both are used to summarize data with a central tendency measure (like mean) and range measures (like confidence intervals). |
+
+|                   |                  |                                                                                                 |                                                                              |
+|----------------|----------------|-----------------------|------------------|
+| `geom_errorbar()` | `stat_summary()` | Adding error bars to plots to show variability around summary statistics (like mean ± SD or CI) | Both are used to represent variability or uncertainty in summary statistics. |
+
+|                |                   |                                                       |                                                                                   |
+|----------------|----------------|----------------|--------------------------|
+| `geom_point()` | `stat_identity()` | Creating scatter plots to show individual data points | Both are used to plot individual data points directly without any transformation. |
+
+|               |                   |                                                              |                                                                                                         |
+|---------------|---------------|---------------|---------------------------|
+| `geom_line()` | `stat_identity()` | Creating line plots to show trends over continuous variables | Both are used to plot continuous data as lines, showing trends over time or other continuous variables. |
+
+|                  |                   |                                                                                      |                                                                                              |
+|----------------|----------------|-------------------|----------------------|
+| `geom_segment()` | `stat_identity()` | Adding segments or arrows to plots, often to highlight or annotate parts of the plot | Both are used to add straight lines or segments to plots, with defined start and end points. |
+
+|                 |                   |                                                                                             |                                                                                                  |
+|---------------|---------------|--------------------|----------------------|
+| `geom_ribbon()` | `stat_identity()` | Adding shaded areas to plots, typically to show confidence intervals around a line or trend | Both are used to add shaded regions to plots, often to represent confidence intervals or ranges. |
+
+4.  What variables does [`stat_smooth()`](https://ggplot2.tidyverse.org/reference/geom_smooth.html) compute? What arguments control its behavior?
+
+stat_smooth() computes y or x, ymin, ymax, and se. It takes the arguments method, formula, se, level, span, fullrange, position, na.rm, orientation, show.legend, inherit.aes, geom_stat, n, span, xseq, level, and method.args
+
+```{r}
+?stat_smooth()
+```
+
+5.  In our proportion bar chart, we needed to set `group = 1`. Why? In other words, what is the problem with these two graphs?
+
+```{r}
+ggplot(diamonds, aes(x = cut, y = after_stat(prop))) + 
+  geom_bar()
+
+ggplot(diamonds, aes(x = cut, fill = color, y = after_stat(prop))) + 
+  geom_bar()
+
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), fill = color, group = 1)) + 
+  geom_bar()
+```
+
+### Position Adjustments
+
+```{r}
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar()
+```
+
+Don't want stacked? Use **identity, dodge, or fill**
+
+```{r}
+#position = identyty
+#more useful for 2d geoms like points
+
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar(alpha = 0.2, position = "identity")
+```
+
+```{r}
+#position = fill
+#makes bars relative to each other
+
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar(position = "fill")
+```
+
+```{r}
+#position = dodge
+#side by side
+
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar(position = "dodge")
+```
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(position = "jitter")
+
+#OR
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_jitter()
+```
+
+### Exercise
+
+1.  What is the problem with the following plot? How could you improve it?
+
+There's no way to see underlying values that might be overlapped. geom_jitter() would reveal those.
+
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point()
+
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_jitter()
+```
+
+2.  What, if anything, is the difference between the two plots? Why?
+
+There is no difference. position = "identity" places each point on the graph exactly where it falls on the graph, but geom_point already does this, making position = "identity" redundant.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(position = "identity")
+```
+
+3.  What parameters to [`geom_jitter()`](https://ggplot2.tidyverse.org/reference/geom_jitter.html) control the amount of jittering?
+
+the width/height arguments
+
+```{r}
+?geom_jitter
+```
+
+4.  Compare and contrast [`geom_jitter()`](https://ggplot2.tidyverse.org/reference/geom_jitter.html) with [`geom_count()`](https://ggplot2.tidyverse.org/reference/geom_count.html).
+
+Both display the underlying data that overlap the same points but in different ways. Jitter offsets each point just a bit, while count diplays the number of points that overlap at each intersection
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_jitter()
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_count()
+```
+
+5.  What’s the default position adjustment for [`geom_boxplot()`](https://ggplot2.tidyverse.org/reference/geom_boxplot.html)? Create a visualization of the `mpg` dataset that demonstrates it.
+
+The default is "dodge". When there are multiple categories on the x-axis, boxplot will place them side by side.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_boxplot()
+
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_boxplot()
+```
+
+### Coordinate system
+
+```{r}
+nz <- map_data("nz")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap()
+```
+
+```{r}
+bar <- ggplot(data = diamonds) +
+  geom_bar(
+    mapping = aes(x = clarity, fill = clarity),
+    show.legend = FALSE,
+    width = 1
+  ) +
+  theme(aspect.ratio = 1)
+
+bar + coord_flip()
+bar + coord_polar()
+```
+
+### Exercises
+
+1.  Turn a stacked bar chart into a pie chart using [`coord_polar()`](https://ggplot2.tidyverse.org/reference/coord_polar.html).
+
+```{r}
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar()
+
+ggplot(mpg, aes(x = drv, fill = class)) +
+  geom_bar(position = "fill") +
+  coord_polar()
+
+ggplot(mpg, aes(x = factor(1), fill = class)) +
+  geom_bar(width = 1) +
+  coord_polar(theta = "y")
+```
+
+2.  What’s the difference between [`coord_quickmap()`](https://ggplot2.tidyverse.org/reference/coord_map.html) and [`coord_map()`](https://ggplot2.tidyverse.org/reference/coord_map.html)?
+
+coord_quickmap() provides a quick approximation, setting the aspect ratio based on lat and long.
+
+coord_map() provides full support for various map projections. Slower, but more accurate
+
+```{r}
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap()
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_map()
+```
+
+3.  What does the following plot tell you about the relationship between city and highway mpg? Why is [`coord_fixed()`](https://ggplot2.tidyverse.org/reference/coord_fixed.html) important? What does [`geom_abline()`](https://ggplot2.tidyverse.org/reference/geom_abline.html) do?
+
+abline() displays the trend of the data, while coord_fixed() maintains the ratio, revealing the true relationship.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point()
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline()
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() +
+  coord_fixed()
+```
+
+LAYERED GRAMMAR
+
+```{r}
+ggplot(data = <DATA>) + 
+  <GEOM_FUNCTION>(
+     mapping = aes(<MAPPINGS>),
+     stat = <STAT>, 
+     position = <POSITION>
+  ) +
+  <COORDINATE_FUNCTION> +
+  <FACET_FUNCTION>
+```

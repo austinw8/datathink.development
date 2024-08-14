@@ -1,0 +1,395 @@
+---
+title: "Chpt. 12 - Logical Vectors"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+```
+
+```{r}
+x <- c(1, 2, 3, 5, 7, 11, 13)
+x*2
+
+df <- tibble(x)
+
+df |> 
+  mutate(y = x*2)
+```
+
+## Comparisons
+
+```{r}
+
+#this is a shortcut
+flights |> 
+  filter(dep_time > 600 & dep_time < 2000 & abs(arr_delay) < 20)
+
+#this is the longer way of doing it
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20,
+    .keep = "used"
+  )
+
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20
+  ) |> 
+  filter(daytime & approx_ontime)
+```
+
+"==" fails with numbers
+
+```{r}
+x <- c(1 / 49 * 49, sqrt(2) ^2)
+x
+x == c(1, 2)
+
+#near() ignores small differences
+near(x, c(1, 2))
+```
+
+operations with unknowns are also unknown
+
+```{r}
+NA > 5
+10 == NA
+
+NA == NA
+
+#the following won't work because it results in NA for every row
+
+flights |> 
+  filter(dep_time == NA)
+
+#instead, use is.na - it returns TRUE for missing values and FALSE for everything else
+is.na(c(TRUE, NA, FALSE))
+
+flights |> 
+  filter(is.na(dep_time))
+
+#can also be used with arrange()
+flights |> 
+  filter(month == 1, day == 1) |> 
+  arrange(dep_time)
+
+#usualy NA with arrange are places at the end, but this puts them at the top
+flights |> 
+  filter(month == 1, day == 1) |> 
+  arrange(desc(is.na(dep_time)), dep_time)
+```
+
+### Exercises
+
+1.  How does [`dplyr::near()`](https://dplyr.tidyverse.org/reference/near.html) work? Type `near` to see the source code. Is `sqrt(2)^2` near 2?
+
+near() has a built in tolerance for minute differences, which is why it's preferable to "==". The default tolerance is set to the square root of the smallest difference
+
+```{r}
+near
+```
+
+2.  Use [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html), [`is.na()`](https://rdrr.io/r/base/NA.html), and [`count()`](https://dplyr.tidyverse.org/reference/count.html) together to describe how the missing values in `dep_time`, `sched_dep_time` and `dep_delay` are connected.
+
+```{r}
+flights |> 
+  mutate(
+    dep_time_missing = is.na(dep_time),
+    sched_dep_time_missing = is.na(sched_dep_time),
+    dep_delay_missing = is.na(dep_delay)
+  ) |> 
+  count(dep_time_missing, sched_dep_time_missing, dep_delay_missing)
+```
+
+## Boolean Algebra
+
+![](images/clipboard-2821013835.png){fig-align="center" width="397"}
+
+| Symbol | Meaning      |
+|--------|--------------|
+| &      | "and"        |
+| \|     | "or"         |
+| !      | "not"        |
+| xor()  | exclusive or |
+
+```{r}
+df <- tibble(x = c(TRUE, FALSE, NA))
+
+df |> 
+  mutate(
+    and = x & NA,
+    or = x | NA
+  )
+```
+
+Order of operations
+
+```{r}
+
+#yes
+flights |> 
+  filter(month == 11 | month == 12)
+
+#no
+flights |> 
+  filter(month == 11 | 12)
+```
+
+%in%
+
+x %in% y returns a logical vector the same length as x that is TRUE whenever a value in x is anywhere in y
+
+```{r}
+1:12 %in% c(1, 5, 11)
+```
+
+Find all flights in November and December?
+
+```{r}
+flights |> 
+  filter(month %in% c(11, 12))
+```
+
+NA %in% NA is TRUE
+
+```{r}
+c(1, 2, NA) == NA
+c(1, 2, NA) %in% NA
+
+flights |> 
+  filter(dep_time %in% c(NA, 0800))
+```
+
+### Exercises
+
+1.  Find all flights where `arr_delay` is missing but `dep_delay` is not. Find all flights where neither `arr_time` nor `sched_arr_time` are missing, but `arr_delay` is.
+
+```{r}
+flights |> 
+  filter(is.na(arr_delay) & !is.na(dep_delay))
+
+flights |> 
+  filter(!is.na(arr_time) & !is.na(sched_arr_time) & is.na(arr_delay))
+```
+
+2.  How many flights have a missing `dep_time`? What other variables are missing in these rows? What might these rows represent?
+
+8,255 rows appear in the filter and are therefore missing a dep_time. These rows are also missing a dep_delay, arr_time, arr_delay, and air_time. These rows are likely flights that have been canceled.
+
+```{r}
+flights |> 
+  filter(is.na(dep_time))
+```
+
+3.  Assuming that a missing `dep_time` implies that a flight is cancelled, look at the number of cancelled flights per day. Is there a pattern? Is there a connection between the proportion of cancelled flights and the average delay of non-cancelled flights?
+
+```{r}
+flights |> 
+  filter(is.na(dep_time)) |> 
+  group_by(month, day) |> 
+  count(dep_time)
+
+flights |> 
+  filter(!is.na(dep_time)) |> 
+  group_by(month, day) |> 
+  summarise(avg_delay = mean(dep_delay), na.rm = TRUE)
+
+
+canceled_flights <- flights |> 
+  filter(is.na(dep_time)) |> 
+  group_by(month, day) |> 
+  count(name = "num_canceled")
+
+avg_delay_non_canceled <- flights |> 
+  filter(!is.na(dep_time)) |> 
+  group_by(month, day) |> 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+
+comparison <- canceled_flights |> 
+  left_join(avg_delay_non_canceled, by = c("month", "day"))
+
+ggplot(comparison, aes(x = num_canceled, y = avg_delay)) +
+  geom_point() + 
+  theme_bw()
+
+cor(comparison$num_canceled, comparison$avg_delay)
+```
+
+There seems to be a moderate positive correlation between the number of cancelled flights and the average delay of non cancelled flights. That is, the more one of the two variables increases, there's a tendency for the other to increase as well.
+
+## Summaries
+
+Logical summaries\
+any() and all()
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(
+    all_delayed = all(dep_delay <= 60, na.rm = TRUE),
+    any_long_delay = any(arr_delay >= 300, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+In logical vector numerics, TRUE = 1 and FALSE = 0
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(
+    proportion_delayed = mean(dep_delay <= 60, na.rm = TRUE),
+    count_long_delay = sum(arr_delay >= 300, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#the above is the percentage of ALL flights that were delayed. In order to find the average delay JUST for flights that were actually delayed... 
+
+flights |> 
+  filter(arr_delay > 0) |> 
+  group_by(year, month, day) |> 
+  summarise(
+    behind = mean(arr_delay),
+    n = n(),
+    .groups = "drop"
+  )
+
+#also want to compute the average delay for flights that arrived early? 
+# [ is used for inline filtering
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(
+    behind = mean(arr_delay[arr_delay > 0], na.rm = TRUE),
+    ahead = mean(arr_delay[arr_delay < 0], na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+```
+
+### Exercises
+
+1.  What will `sum(is.na(x))` tell you? How about `mean(is.na(x))`?
+
+sum(is.na(x)) tells you the total number of missing (NA) values in the vector x.\
+mean(is.na(x)) tells you the proportion of missing (NA) values in the vector X
+
+2.  What does [`prod()`](https://rdrr.io/r/base/prod.html) return when applied to a logical vector? What logical summary function is it equivalent to? What does [`min()`](https://rdrr.io/r/base/Extremes.html) return when applied to a logical vector? What logical summary function is it equivalent to? Read the documentation and perform a few experiments.
+
+prod() computes the product of all elements in a vector. It's equivalent to all(), because prod() returns TRUE (or 1) only if all elements are TRUE, and FALSE (or 0) if there's at least one FALSE.
+
+## Conditional Transformations
+
+[if_else()]{.underline}
+
+```{r}
+x <- c(-3:3, NA)
+if_else(x > 0, "+ve", "-ve")
+if_else(x > 0, "+ve", "-ve", "???")
+```
+
+```{r}
+if_else(x < 0, -x, x)
+```
+
+```{r}
+x1 <- c(NA, 1, 2, NA)
+y1 <- c(3, NA, 4, 6)
+if_else(is.na(x1), y1, x1)
+
+```
+
+```{r}
+if_else(x == 0, "0", if_else(x < 0, "-ve", "+ve"), "???")
+```
+
+[case_when()]{.underline}
+
+condition (logical vector) \~ output
+
+```{r}
+x <- c(-3:3, NA)
+case_when(
+  x == 0 ~ "0",
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve",
+  is.na(x) ~ "???"
+)
+```
+
+No matching cases = "NA"
+
+```{r}
+case_when(
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve"
+)
+
+# .default is a catch all
+case_when(
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve",
+  .default = "???"
+)
+
+#if multiple conditions match, only the first is applied
+```
+
+```{r}
+flights |> 
+  mutate(
+    status = case_when(
+      is.na(arr_delay) ~ "cancelled",
+      arr_delay < -30 ~ "very early",
+      arr_delay < -15 ~ "early",
+      abs(arr_delay) <= 15 ~ "on time",
+      arr_delay < 60 ~ "late",
+      arr_delay < Inf ~ "very late",
+    ),
+    .keep = "used"
+  )
+```
+
+### Exercises
+
+1.  A number is even if it’s divisible by two, which in R you can find out with `x %% 2 == 0`. Use this fact and [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html) to determine whether each number between 0 and 20 is even or odd.
+
+```{r}
+x <- c(1:20)
+x %% 2 == 0
+
+if_else(x %% 2 == 0, "Even", "Odd")
+```
+
+2.  Given a vector of days like `x <- c("Monday", "Saturday", "Wednesday")`, use an [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html) statement to label them as weekends or weekdays.
+
+```{r}
+days <- c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+
+if_else(days %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+```
+
+3.  Use [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html) to compute the absolute value of a numeric vector called `x`.
+
+```{r}
+numbers <- c(-3, -2, -1, 0, 1, 2, 3)
+if_else(numbers < 0, -numbers, numbers)
+```
+
+4.  Write a [`case_when()`](https://dplyr.tidyverse.org/reference/case_when.html) statement that uses the `month` and `day` columns from `flights` to label a selection of important US holidays (e.g., New Years Day, 4th of July, Thanksgiving, and Christmas). First create a logical column that is either `TRUE` or `FALSE`, and then create a character column that either gives the name of the holiday or is `NA`.
+
+```{r}
+flights |> 
+  mutate(holiday = case_when(
+    day == 1 & month == 1 ~ "New Year's Day",
+    day == 4 & month == 7 ~ "4th of July",
+    day == 25 & month == 12 ~ "Christmas",
+    day == 17 & month == 3 ~ "St. Patrick's Day"
+  ),
+  .after = day)
+```
