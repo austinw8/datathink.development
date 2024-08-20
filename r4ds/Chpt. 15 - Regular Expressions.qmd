@@ -1,0 +1,451 @@
+---
+title: "Chpt. 15 - Regular Expressions"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+## Pattern basics
+
+```{r}
+library(tidyverse)
+library(babynames)
+```
+
+```{r}
+fruit
+
+str_view(fruit, "berry")
+```
+
+Letters and numbers = **literal characters**
+
+Punctuation (., +, \[, \], ?) = **metacharacters**
+
+```{r}
+str_view(c("a", "ab", "ae", "bd", "ea", "eab"), "a.")
+
+#find any fruit containing "a" followed by 3 letters, then an "e"
+str_view(fruit, "a...e")
+```
+
+**Quantifiers:**
+
+-   `?` makes a pattern optional (i.e. it matches 0 or 1 times)
+
+-   `+` lets a pattern repeat (i.e. it matches at least once)
+
+-   `*` lets a pattern be optional or repeat (i.e. it matches any number of times, including 0).
+
+```{r}
+#match an "a" optionally followed by a "b"
+str_view(c("a", "ab", "abb"), "ab?")
+
+#matches an "a" followed by at least one "b"
+str_view(c("a", "ab", "abb"), "ab+")
+
+#matches an "a" folllowed by any number of "b"s
+str_view(c("a", "ab", "abb"), "ab*")
+```
+
+**Character class**
+
+```{r}
+
+#matches an x sandwished between any vowels
+str_view(words, "[aeiou]x[aeiou]")
+
+#matches a y sandwitched between anything that's NOT a vowel
+str_view(words, "[^aeiou]y[^aeiou]")
+
+
+```
+
+**Alteration**
+
+```{r}
+
+#matches fruits containing "apple", "melon", OR "nut"
+str_view(fruit, "apple|melon|nut")
+
+#matches any fruit containing a repeated vowel
+str_view(fruit, "aa|ee|ii|oo|uu")
+```
+
+## Key Functions
+
+```{r}
+str_detect(c("a", "b", "c"), "[aeiou]")
+
+babynames |> 
+  filter(str_detect(name, "x")) |> 
+  count(name, wt = n, sort = TRUE)
+```
+
+```{r}
+babynames |> 
+  group_by(year) |> 
+  summarise(prop_x = mean(str_detect(name, "x"))) |> 
+  ggplot(aes(x = year, y = prop_x)) +
+  geom_line()
+```
+
+```{r}
+x <- c("apple", "banana", "pear")
+str_count(x, "p")
+
+str_count("abababa", "aba")
+str_view("abababa", "aba")
+```
+
+```{r}
+babynames |> 
+  count(name) |> 
+  mutate(
+    vowels = str_count(name, "[aeiou]"),
+    consonants = str_count(name, "[^aeiou]")
+  )
+
+#regex is case sensitive - to fix the above...
+babynames |> 
+  count(name) |> 
+  mutate(
+    vowels = str_count(name, "[aeiouAEIOU]"),
+    consonants = str_count(name, "[^aeiou]")
+  )
+
+#OR
+
+babynames |> 
+  count(name) |> 
+  mutate(
+    vowels = str_count(name, regex("[aeiou]", ignore_case = TRUE)),
+    consonants = str_count(name, regex("[^aeiou]", ignore_case = TRUE))
+  )
+
+#OR
+
+babynames |> 
+  count(name) |> 
+  mutate(
+    vowels = str_count(str_to_lower(name), "[aeiou]"),
+    consonants = str_count(str_to_lower(name), "[^aeiou]")
+  )
+
+babynames |> 
+  count(name) |> 
+  mutate(
+    name = str_to_lower(name),
+    vowels = str_count(name, "[aeiou]"),
+    consonants = str_count(name, "[^aeiou]")
+  )
+```
+
+```{r}
+x <- c("apple", "pear", "banana")
+str_replace_all(x, "[aeiou]", "-")
+str_remove_all(x, "[aeiou]")
+```
+
+```{r}
+df <- tribble(
+  ~str,
+  "<Sheryl>-F_34",
+  "<Kisha>-F_45", 
+  "<Brandon>-N_33",
+  "<Sharon>-F_38", 
+  "<Penny>-F_58",
+  "<Justin>-M_41", 
+  "<Patricia>-F_84", 
+)
+
+df |> 
+  separate_wider_regex(
+    str, 
+    patterns = c(
+      "<",
+      name = "[A-Za-z]+",
+      ">-",
+      gender = ".",
+      "_",
+      age = "[0-9]+"
+    )
+  )
+```
+
+### Exercises
+
+1.  What baby name has the most vowels? What name has the highest proportion of vowels? (Hint: what is the denominator?)
+
+```{r}
+babynames |> 
+  count(name) |> 
+  mutate(
+    name = str_to_lower(name),
+    vowels = str_count(name, "[aeiou]"),
+    consonants = str_count(name, "[^aeiou]"),
+    total = str_count(name, "[a-z]"),
+    prop_vowels = vowels / total
+  ) |> 
+  arrange(desc(prop_vowels))
+```
+
+The name with the highest number of vowels is tied between "mariadelrosario" and "mariaguadalupe". The name with the highest proportion of vowels is an 8-way-tie between "ai", "aia", "aoi", "ea", "eau", "ia", "ii", and "io".
+
+2.  Replace all forward slashes in `"a/b/c/d/e"` with backslashes. What happens if you attempt to undo the transformation by replacing all backslashes with forward slashes? (We’ll discuss the problem very soon.)
+
+```{r}
+str <- "a/b/c/d/e"
+str_new <- str_replace_all(str, "/", "\\\\")
+```
+
+3.  Implement a simple version of [`str_to_lower()`](https://stringr.tidyverse.org/reference/case.html) using [`str_replace_all()`](https://stringr.tidyverse.org/reference/str_replace.html).
+
+```{r}
+x <- c("CAPITAL", "WateR BottLe", "BanANa")
+
+simple_str_to_lower <- function(text) {
+  str_replace_all(text, "[A-Z]", function(x) tolower(x))
+}
+
+simple_str_to_lower(x)
+```
+
+4.  Create a regular expression that will match telephone numbers as commonly written in your country.
+
+```{r}
+
+format_phone_number <- function(number) {
+  number <- as.character(number)
+  formatted_number <- sub("^(\\d{3})(\\d{3})(\\d{4})$", "(\\1)-\\2-\\3", number)
+  return(formatted_number)
+}
+
+phone_number <- 5305912177
+format_phone_number(phone_number)
+```
+
+------------------------------------------------------------------------
+
+## Pattern Details
+
+**Escaping**
+
+```{r}
+dot <- "\\."
+str_view(dot)
+
+str_view(c("abc", "a.c", "bef"), "a\\.c")
+
+x <- "a\\b"
+str_view(x)
+str_view(x, "\\\\")
+str_view(x, r"{\\}")
+
+
+```
+
+```{r}
+str_view(c("abc", "a.c", "a*c", "a c"), "a[.]c")
+str_view(c("abc", "a.c", "a*c", "a c"), ".[*]c")
+```
+
+**Anchors**
+
+```{r}
+
+#acnhor to start
+str_view(fruit, "^a")
+
+#anchor to end
+str_view(fruit, "a$")
+
+#anchor to full string
+str_view(fruit, "apple")
+str_view(fruit, "^apple$")
+```
+
+```{r}
+x <- c("summary(x)", "summarize(df)", "rowsum(x)", "sum(x)")
+str_view(x, "sum")
+str_view(x, "\\bsum\\b")
+```
+
+```{r}
+str_view("abc", c("$", "^", "\\b"))
+
+str_replace_all("abc", c("$", "^", "\\b"), "--")
+```
+
+**Character class**
+
+```{r}
+x <- "abcd ABCD 12345 -!@#%."
+str_view(x, "[abc]+")
+str_view(x, "[a-z]+")
+str_view(x, "[^a-z0-9]+")
+
+str_view("a-b-c", "[a-c]")
+str_view("a-b-c", "[a\\-c]")
+```
+
+Others:
+
+-   `\d` matches any digit;\
+    `\D` matches anything that isn’t a digit.
+
+-   `\s` matches any whitespace (e.g., space, tab, newline);\
+    `\S` matches anything that isn’t whitespace.
+
+-   `\w` matches any “word” character, i.e. letters and numbers;\
+    `\W` matches any “non-word” character.
+
+**Quantifiers**
+
+-   `?` matches 0 or 1 times
+
+-   `+` matches 1 or more times
+
+-   `*`matches 0 or more times
+
+-   `{n}` matches exactly n times.
+
+-   `{n,}` matches at least n times.
+
+-   `{n,m}` matches between n and m times.
+
+**Grouping and Capturing**
+
+```{r}
+#find all fruits with repeated pairs of letters
+str_view(fruit, "(..)\\1")
+
+#find all words that start and end with the same pair of letters
+str_view(words, "^(..).*\\1$")
+```
+
+```{r}
+#switch the 2nd and 3rd words in a sentence
+sentences |> 
+  str_replace("(\\w+) (\\w+) (\\w+)", "\\1 \\3 \\2") |> 
+  str_view()
+```
+
+### Exercises
+
+1.  How would you match the literal string `"'\`? How about `"$^$"`?
+
+2.  Explain why each of these patterns don’t match a `\`: `"\"`, `"\\"`, `"\\\"`.
+
+3.  Given the corpus of common words in [`stringr::words`](https://stringr.tidyverse.org/reference/stringr-data.html), create regular expressions that find all words that:
+
+    a.  Start with “y”.
+
+    ```{r}
+    str_view(words, "^y")
+    ```
+
+    a.  Don’t start with “y”.
+
+    ```{r}
+    str_view(words, "^[^y]")
+    ```
+
+    a.  End with “x”.
+
+    ```{r}
+    str_view(words, "x$")
+    ```
+
+    a.  Are exactly three letters long. (Don’t cheat by using [`str_length()`](https://stringr.tidyverse.org/reference/str_length.html)!)
+
+    ```{r}
+    str_view(words, "^\\w{3}$")
+    ```
+
+    a.  Have seven letters or more.
+
+    ```{r}
+    str_view(words, "^\\w{7}")
+    ```
+
+    a.  Contain a vowel-consonant pair.
+
+    ```{r}
+    str_view(words, "[aeiou][^aeiou]")
+    ```
+
+    a.  Contain at least two vowel-consonant pairs in a row.
+
+    ```{r}
+    str_view(words, "[aeiou][^aeiou][aeiou][^aeiou]")
+    ```
+
+    a.  Only consist of repeated vowel-consonant pairs.
+
+```{r}
+str_view(words, "^([aeiou][^aeiou])+$")
+```
+
+4.  Create 11 regular expressions that match the British or American spellings for each of the following words: airplane/aeroplane, aluminum/aluminium, analog/analogue, ass/arse, center/centre, defense/defence, donut/doughnut, gray/grey, modeling/modelling, skeptic/sceptic, summarize/summarise. Try and make the shortest possible regex!
+
+```{=html}
+<!-- -->
+```
+1.  Switch the first and last letters in `words`. Which of those strings are still `words`?
+
+2.  Describe in words what these regular expressions match: (read carefully to see if each entry is a regular expression or a string that defines a regular expression.)
+
+    a.  `^.*$`
+
+    b.  `"\\{.+\\}"`
+
+    c.  `\d{4}-\d{2}-\d{2}`
+
+    d.  `"\\\\{4}"`
+
+    e.  `\..\..\..`
+
+    f.  `(.)\1\1`
+
+    g.  `"(..)\\1"`
+
+3.  Solve the beginner regexp crosswords at <https://regexcrossword.com/challenges/beginner>.
+
+## Pattern Control
+
+```{r}
+bananas <- c("banana", "Banana", "BANANA")
+str_view(bananas, "banana")
+str_view(bananas, regex("banana", ignore_case = TRUE))
+```
+
+```{r}
+x <- "Line 1\nLine 2\nLine 3"
+str_view(x, ".Line")
+str_view(x, regex(".Line", dotall = TRUE))
+
+str_view(x, "^Line")
+
+str_view(x, regex("^Line", multiline = TRUE))
+```
+
+## Practice
+
+1.  **Check Your Work**
+
+```{r}
+#all words starting with "the...."
+str_view(sentences, "^The")
+
+#create word boundaries
+str_view(sentences, "^The\\b")
+```
+
+```{r}
+#all words that begin with a pronoun
+
+str_view(sentences, "^She|He|It|They\\b")
+str_view(sentences, "^(She|He|It|They)\\b")
+
+```
