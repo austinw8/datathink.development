@@ -1,0 +1,339 @@
+---
+title: "Import (chpts. 20-24)"
+author: "Austin Mangelson"
+format: html
+editor: visual
+---
+
+# Spreadsheets
+
+## Excel
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(writexl)
+```
+
+```{r}
+students <- read_excel("../data/students.xlsx",
+                       col_names = c("student_id", "full_name", "favorite_food", "meal_plan", "age"),
+                       skip = 1,
+                       na = c("", "N/A"),
+                       col_types = c("numeric", "text", "text", "text", "text"))
+
+students <- students |> 
+  mutate(
+    age = if_else(age == "five", "5", age),
+    age = parse_number(age)
+  )
+```
+
+Default is 1st sheet, but you can specify
+
+```{r}
+excel_sheets("../data/penguins.xlsx")
+
+penguins_torgersen <- read_excel("../data/penguins.xlsx", sheet = "Torgersen Island")
+penguins_biscoe <- read_excel("../data/penguins.xlsx", sheet = "Biscoe Island")
+penguins_dream <- read_excel("../data/penguins.xlsx", sheet = "Dream Island")
+```
+
+```{r}
+penguins <- bind_rows(penguins_torgersen, penguins_biscoe, penguins_dream)
+```
+
+```{r}
+deaths_path <- readxl_example("deaths.xlsx")
+deaths <- read_excel(deaths_path, range = "A5:F15:")
+```
+
+**Writing to Excel**
+
+```{r}
+bake_sale <- tibble(
+  item = factor(c("brownie", "cupcake", "cookie")),
+  quantity = c(10, 5, 8)
+)
+```
+
+```{r}
+write_xlsx(bake_sale, path = "../data/bake-sale.xlsx")
+```
+
+```{r}
+read_excel("../data/bake-sale.xlsx")
+```
+
+### **Exercises**
+
+1.  In an Excel file, create the following data set and save it as `survey.xlsx`. Then, read it into R, with `survey_id` as a character variable and `n_pets` as a numerical variable.
+
+```{r}
+survey <- read_excel("../data/survey.xlsx", 
+                     col_names = c("survey_id", "n_pets"),
+                     skip = 1,
+                     na = c("", "N/A"))
+
+survey <- survey |> 
+  mutate(
+    n_pets = if_else(n_pets == "two", "2", n_pets),
+    n_pets = parse_number(n_pets)
+  )
+```
+
+2.  
+
+```{r}
+roster <- read_excel("../data/roster.xlsx")
+
+roster <- roster |> 
+  fill(subgroup, group)
+```
+
+## Google Sheets
+
+```{r}
+library(googlesheets4)
+```
+
+```{r}
+students_sheet_id <- "1V1nPp1tzOuutXFLb3G9Eyxi3qxeEhnOXUzL5_BcCQ0w"
+students <- read_sheet(students_sheet_id,
+                       col_names = c("student_id", "full_name", "favorite_food", "meal_plan", "age"),
+                       skip = 1,
+                       na = c("", "N/A"),
+                       col_types = "dcccc"
+                       )
+```
+
+------------------------------------------------------------------------
+
+# Databases
+
+```{r}
+library(DBI)
+library(dbplyr)
+library(tidyverse)
+```
+
+```{r}
+
+#example
+con <- DBI::dbConnect(
+  RMariaDB4::MariaDB(),
+  username = "foo"
+)
+con <- DBI::dbConnect(
+  RPostgres::Postgres(),
+  hostname = "databases.mycompany.com",
+  port = 1234
+)
+```
+
+```{r}
+con <- DBI::dbConnect(duckdb::duckdb(), dbdir = "duckdb")
+```
+
+Load some data:
+
+```{r}
+dbWriteTable(con, "mpg", ggplot2::mpg)
+dbWriteTable(con, "diamonds", ggplot2::diamonds)
+```
+
+**DBI basics:**
+
+```{r}
+dbListTables(con)
+
+con |> 
+  dbReadTable("diamonds") |> 
+  as_tibble()
+
+sql <- "
+  SELECT carat, cut, clarity, color, price 
+  FROM diamonds 
+  WHERE price > 15000
+"
+
+as_tibble(dbGetQuery(con, sql))
+```
+
+```{r}
+diamonds_db <- tbl(con, "diamonds")
+diamonds_db
+```
+
+```{r}
+big_diamonds_db <- diamonds_db |> 
+  filter(price > 15000) |> 
+  select(carat:clarity, price)
+```
+
+```{r}
+big_diamonds_db |> 
+  show_query()
+```
+
+## SQL
+
+```{r}
+dbplyr::copy_nycflights13(con)
+flights <- tbl(con, "flights")
+planes <- tbl(con, "planes")
+```
+
+CREATE
+
+INSERT
+
+**SELECT**
+
+Queries: SELECT, FROM, WHERE, ORDER BY, GROUP BY
+
+```{r}
+flights |> show_query()
+
+flights |> 
+  filter(dest == "IAH") |> 
+  arrange(dep_delay) |> 
+  show_query()
+
+flights |> 
+  group_by(dest) |> 
+  summarise(dep_delay = mean(dep_delay, na.rm = TRUE)) |> 
+  show_query()
+```
+
+## [**Working With SQL Databases From R: Introduction & Connecting To Databases**](https://www.youtube.com/watch?v=F4HP3CXijC8)
+
+```{r}
+library(DBI)
+library(RSQLite)
+library(dbplyr)
+```
+
+First need to connect to the database
+
+```{r}
+
+portaldb <- dbConnect(
+  SQLite(),  #driver
+  "portal.sqlite" #path to database file
+)
+
+#another way to write what's above
+portaldb <- dbConnect(RSQLite::SQLite(), "portan.sqlite")
+```
+
+```{r}
+
+#list tables
+dbListTables(portaldb)
+#plots, species, surveys
+
+#find details about tables
+dbListFields(portaldb, "plots") #plots = table name
+
+surveys <- tbl(portaldb, "surveys")
+surveys
+surveys_df <- collect(surveys) #turn it into a table in R
+```
+
+# Arrow
+
+```{r}
+library(tidyverse)
+library(arrow)
+library(dbplyr, warn.conflicts = FALSE)
+library(duckdb)
+```
+
+```{r}
+dir.create("data", showWarnings = FALSE)
+
+curl::multi_download(
+  "https://r4ds.s3.us-west-2.amazonaws.com/seattle-library-checkouts.csv",
+  "data/seattle-library-checkouts.csv",
+  resume = TRUE
+)
+```
+
+```{r}
+seattle_csv <- open_dataset(
+  sources = "data/seattle-library-checkouts.csv", 
+  col_types = schema(ISBN = string()),
+  format = "csv"
+)
+```
+
+# Hierarchical Data
+
+Lists as variable type, un-nesting data (common when using APIs)
+
+# Web Scraping
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+
+```{r}
+html <- read_html("http://rvest.tidyverse.org/")
+html
+```
+
+Example: Star Wars
+
+```{r}
+url <- "https://rvest.tidyverse.org/articles/starwars.html"
+html <- read_html(url)
+
+section <- html |> html_elements("section")
+section
+```
+
+```{r}
+section |> html_element("h2") |> html_text2()
+section |> html_element(".director") |> html_text2()
+
+tibble(
+  title = section |> 
+    html_element("h2") |> 
+    html_text2(),
+  released = section |> 
+    html_element("p") |> 
+    html_text2() |> 
+    str_remove("Released: ") |> 
+    parse_date(),
+  director = section |> 
+    html_element(".director") |> 
+    html_text2(),
+  intro = section |> 
+    html_element(".crawl") |> 
+    html_text2()
+)
+#> # A tibble: 7 × 4
+#>   title                   released   director         intro                  
+#>   <chr>                   <date>     <chr>            <chr>                  
+#> 1 The Phantom Menace      1999-05-19 George Lucas     "Turmoil has engulfed …
+#> 2 Attack of the Clones    2002-05-16 George Lucas     "There is unrest in th…
+#> 3 Revenge of the Sith     2005-05-19 George Lucas     "War! The Republic is …
+#> 4 A New Hope              1977-05-25 George Lucas     "It is a period of civ…
+#> 5 The Empire Strikes Back 1980-05-17 Irvin Kershner   "It is a dark time for…
+#> 6 Return of the Jedi      1983-05-25 Richard Marquand "Luke Skywalker has re…
+#> # ℹ 1 more row
+```
+
+Example 2: IMDB Movies
+
+```{r}
+url <- "https://web.archive.org/web/20220201012049/https://www.imdb.com/chart/top/"
+html <- read_html(url)
+
+table <- html |> 
+  html_element("table") |> 
+  html_table()
+table
+```
